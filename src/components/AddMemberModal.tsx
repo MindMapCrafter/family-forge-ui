@@ -114,10 +114,21 @@ const AddMemberModal = ({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          {/* Basic relationships */}
                           <SelectItem value="parent">Parent</SelectItem>
                           <SelectItem value="child">Child</SelectItem>
                           <SelectItem value="spouse">Spouse</SelectItem>
                           <SelectItem value="sibling">Sibling</SelectItem>
+                          
+                          {/* Extended family relationships */}
+                          <SelectItem value="grandfather">Grandfather</SelectItem>
+                          <SelectItem value="grandmother">Grandmother</SelectItem>
+                          <SelectItem value="uncle">Uncle</SelectItem>
+                          <SelectItem value="aunt">Aunt</SelectItem>
+                          <SelectItem value="cousin">Cousin</SelectItem>
+                          <SelectItem value="nephew">Nephew</SelectItem>
+                          <SelectItem value="niece">Niece</SelectItem>
+                          <SelectItem value="grandchild">Grandchild</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

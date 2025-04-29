@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -47,6 +46,7 @@ const calculateNodePosition = (
   const baseY = relatedNode.position.y;
 
   switch (relationship) {
+    // Basic relationships
     case 'parent':
       return { x: baseX, y: baseY - verticalSpacing };
     case 'child':
@@ -55,6 +55,21 @@ const calculateNodePosition = (
       return { x: baseX + horizontalSpacing, y: baseY };
     case 'sibling':
       return { x: baseX + horizontalSpacing, y: baseY };
+    
+    // Extended family relationships
+    case 'grandfather':
+    case 'grandmother':
+      return { x: baseX, y: baseY - (verticalSpacing * 2) };
+    case 'uncle':
+    case 'aunt':
+      return { x: baseX + horizontalSpacing, y: baseY - verticalSpacing };
+    case 'cousin':
+      return { x: baseX + horizontalSpacing, y: baseY };
+    case 'nephew':
+    case 'niece':
+      return { x: baseX + horizontalSpacing, y: baseY + verticalSpacing };
+    case 'grandchild':
+      return { x: baseX, y: baseY + (verticalSpacing * 2) };
     default:
       return { x: baseX, y: baseY };
   }
