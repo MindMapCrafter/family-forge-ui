@@ -35,6 +35,8 @@ const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
   relationship: z.string().min(1, { message: 'Relationship is required' }),
   relatedTo: z.string().optional(),
+  gender: z.enum(['male', 'female', 'other']).default('other'),
+  image: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,6 +62,8 @@ const AddMemberModal = ({
       name: '',
       relationship: isFirstMember ? 'root' : '',
       relatedTo: '',
+      gender: 'other',
+      image: '',
     },
   });
 
@@ -90,6 +94,46 @@ const AddMemberModal = ({
                   <FormLabel>Name</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="image"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profile Image URL (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://example.com/image.jpg" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

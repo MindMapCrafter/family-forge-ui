@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -90,7 +91,7 @@ const FamilyTree = () => {
   };
 
   const handleAddMemberSubmit = (values: any) => {
-    const { name, relationship, relatedTo } = values;
+    const { name, relationship, relatedTo, gender, image } = values;
     
     // Generate a unique ID for the new node
     const newId = `member-${Date.now()}`;
@@ -103,6 +104,8 @@ const FamilyTree = () => {
         data: {
           name,
           relationship: 'Root',
+          gender,
+          image,
           onEdit: () => handleEditMember(newId),
           onDelete: () => handleDeleteMember(newId),
         },
@@ -139,6 +142,8 @@ const FamilyTree = () => {
       data: {
         name,
         relationship: relationship.charAt(0).toUpperCase() + relationship.slice(1),
+        gender,
+        image,
         onEdit: () => handleEditMember(newId),
         onDelete: () => handleDeleteMember(newId),
       },
@@ -253,6 +258,8 @@ const FamilyTree = () => {
       data: {
         name: node.data.name,
         relationship: node.data.relationship,
+        gender: node.data.gender,
+        image: node.data.image,
       }
     }));
     
