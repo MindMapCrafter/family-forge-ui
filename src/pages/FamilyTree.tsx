@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -114,8 +113,9 @@ const FamilyTree = () => {
           relationship: 'Root',
           gender,
           image,
-          onEdit: () => handleEditMember(newId),
-          onDelete: () => handleDeleteMember(newId),
+          id: newId,
+          onEdit: (id: string) => handleEditMember(id),
+          onDelete: (id: string) => handleDeleteMember(id),
         },
         position: { x: 0, y: 0 }
       };
@@ -152,8 +152,9 @@ const FamilyTree = () => {
         relationship: relationship.charAt(0).toUpperCase() + relationship.slice(1),
         gender,
         image,
-        onEdit: () => handleEditMember(newId),
-        onDelete: () => handleDeleteMember(newId),
+        id: newId,
+        onEdit: (id: string) => handleEditMember(id),
+        onDelete: (id: string) => handleDeleteMember(id),
       },
       position
     };
@@ -215,9 +216,10 @@ const FamilyTree = () => {
             name: values.name,
             gender: values.gender,
             image: values.image,
-            // Preserve the callbacks
-            onEdit: () => handleEditMember(node.id),
-            onDelete: () => handleDeleteMember(node.id),
+            // Preserve the callbacks and id
+            id: node.data.id,
+            onEdit: node.data.onEdit,
+            onDelete: node.data.onDelete,
           }
         };
       }
@@ -266,8 +268,9 @@ const FamilyTree = () => {
                 ...node,
                 data: {
                   ...node.data,
-                  onEdit: () => handleEditMember(node.id),
-                  onDelete: () => handleDeleteMember(node.id),
+                  id: node.id, // Ensure the id is set on the data object
+                  onEdit: (id: string) => handleEditMember(id),
+                  onDelete: (id: string) => handleDeleteMember(id),
                 }
               }));
               
@@ -310,6 +313,7 @@ const FamilyTree = () => {
         relationship: node.data.relationship,
         gender: node.data.gender,
         image: node.data.image,
+        id: node.id, // Preserve the id in data for reimporting
       }
     }));
     

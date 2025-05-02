@@ -67,7 +67,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               variant="ghost" 
               size="sm" 
               className="h-8 w-8 p-0" 
-              onClick={() => data.onEdit && data.onEdit(id)}
+              onClick={() => data.onEdit && data.onEdit(data.id)}
             >
               <Edit size={14} />
               <span className="sr-only">Edit</span>
@@ -76,7 +76,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               variant="ghost" 
               size="sm" 
               className="h-8 w-8 p-0" 
-              onClick={() => data.onDelete && data.onDelete(id)}
+              onClick={() => data.onDelete && data.onDelete(data.id)}
             >
               <Trash2 size={14} />
               <span className="sr-only">Delete</span>
