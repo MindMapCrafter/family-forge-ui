@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -185,16 +186,21 @@ const FamilyTree = () => {
   };
 
   const handleEditMember = (id: string) => {
-    const node = nodes.find(node => node.id === id);
+    console.log("Edit requested for ID:", id);
+    console.log("Available nodes:", nodes.map(n => ({ id: n.id, nodeDataId: n.data.id, name: n.data.name })));
+    
+    const node = nodes.find(node => node.data.id === id);
     if (node) {
+      console.log("Found node to edit:", node);
       setCurrentEditNode({
-        id,
+        id: node.data.id,
         name: node.data.name,
         gender: node.data.gender,
         image: node.data.image
       });
       setIsEditModalOpen(true);
     } else {
+      console.log("Node not found for id:", id);
       toast({
         title: 'Error',
         description: 'Could not find the family member to edit.',
@@ -206,9 +212,12 @@ const FamilyTree = () => {
   const handleEditMemberSubmit = (values: any) => {
     if (!currentEditNode) return;
     
+    console.log("Updating node with ID:", currentEditNode.id, "Values:", values);
+    
     setNodes(nodes.map(node => {
-      if (node.id === currentEditNode.id) {
+      if (node.data.id === currentEditNode.id) {
         // Update the node data while preserving other properties
+        console.log("Updating node:", node.id);
         return {
           ...node,
           data: {
@@ -238,7 +247,7 @@ const FamilyTree = () => {
   const handleDeleteMember = (id: string) => {
     if (window.confirm('Are you sure you want to delete this family member?')) {
       // Remove the node
-      setNodes(nodes.filter(node => node.id !== id));
+      setNodes(nodes.filter(node => node.data.id !== id));
       
       // Remove any connected edges
       setEdges(edges.filter(edge => edge.source !== id && edge.target !== id));
@@ -313,7 +322,7 @@ const FamilyTree = () => {
         relationship: node.data.relationship,
         gender: node.data.gender,
         image: node.data.image,
-        id: node.id, // Preserve the id in data for reimporting
+        id: node.data.id, // Preserve the id in data for reimporting
       }
     }));
     

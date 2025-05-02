@@ -46,6 +46,9 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
     return data.name.charAt(0).toUpperCase();
   };
 
+  // For debugging
+  console.log('Node render:', { id, dataId: data.id, data });
+
   return (
     <div className="min-w-[180px]">
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
@@ -67,7 +70,10 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               variant="ghost" 
               size="sm" 
               className="h-8 w-8 p-0" 
-              onClick={() => data.onEdit && data.onEdit(data.id)}
+              onClick={() => {
+                console.log('Edit button clicked with id:', data.id);
+                data.onEdit && data.onEdit(data.id);
+              }}
             >
               <Edit size={14} />
               <span className="sr-only">Edit</span>
@@ -76,7 +82,10 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               variant="ghost" 
               size="sm" 
               className="h-8 w-8 p-0" 
-              onClick={() => data.onDelete && data.onDelete(data.id)}
+              onClick={() => {
+                console.log('Delete button clicked with id:', data.id);
+                data.onDelete && data.onDelete(data.id);
+              }}
             >
               <Trash2 size={14} />
               <span className="sr-only">Delete</span>
