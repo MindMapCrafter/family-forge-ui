@@ -18,6 +18,7 @@ import { Plus, FileDown, FileUp, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import FamilyMemberNode from '@/components/FamilyMemberNode';
 import AddMemberModal from '@/components/AddMemberModal';
+import EditMemberModal from '@/components/EditMemberModal';
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
@@ -80,6 +81,13 @@ const FamilyTree = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentEditNode, setCurrentEditNode] = useState<{
+    id: string;
+    name: string;
+    gender?: 'male' | 'female' | 'other';
+    image?: string;
+  } | null>(null);
   const { toast } = useToast();
   
   const onConnect = useCallback((params: Connection) => {
@@ -176,11 +184,53 @@ const FamilyTree = () => {
   };
 
   const handleEditMember = (id: string) => {
-    // To be implemented: Edit functionality
+    const node = nodes.find(node => node.id === id);
+    if (node) {
+      setCurrentEditNode({
+        id,
+        name: node.data.name,
+        gender: node.data.gender,
+        image: node.data.image
+      });
+      setIsEditModalOpen(true);
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Could not find the family member to edit.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleEditMemberSubmit = (values: any) => {
+    if (!currentEditNode) return;
+    
+    setNodes(nodes.map(node => {
+      if (node.id === currentEditNode.id) {
+        // Update the node data while preserving other properties
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            name: values.name,
+            gender: values.gender,
+            image: values.image,
+            // Preserve the callbacks
+            onEdit: () => handleEditMember(node.id),
+            onDelete: () => handleDeleteMember(node.id),
+          }
+        };
+      }
+      return node;
+    }));
+    
     toast({
-      title: 'Edit not implemented',
-      description: 'Edit functionality will be added soon.',
+      title: 'Member updated',
+      description: `${values.name} has been updated in your family tree.`
     });
+    
+    setIsEditModalOpen(false);
+    setCurrentEditNode(null);
   };
 
   const handleDeleteMember = (id: string) => {
@@ -346,6 +396,19 @@ const FamilyTree = () => {
         existingNodes={nodes}
         isFirstMember={nodes.length === 0}
       />
+      
+      {currentEditNode && (
+        <EditMemberModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          onSubmit={handleEditMemberSubmit}
+          initialValues={{
+            name: currentEditNode.name,
+            gender: currentEditNode.gender,
+            image: currentEditNode.image
+          }}
+        />
+      )}
     </div>
   );
 };

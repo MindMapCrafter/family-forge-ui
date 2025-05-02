@@ -11,16 +11,18 @@ interface FamilyMemberData {
   relationship: string;
   gender?: 'male' | 'female' | 'other';
   image?: string;
-  onEdit?: () => void;
-  onDelete?: () => void;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  id: string;
 }
 
 interface FamilyMemberNodeProps {
   data: FamilyMemberData;
   isConnectable?: boolean;
+  id: string;
 }
 
-const FamilyMemberNode = ({ data, isConnectable = true }: FamilyMemberNodeProps) => {
+const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodeProps) => {
   // Determine background color based on gender
   const getBorderColor = () => {
     switch (data.gender) {
@@ -65,7 +67,7 @@ const FamilyMemberNode = ({ data, isConnectable = true }: FamilyMemberNodeProps)
               variant="ghost" 
               size="sm" 
               className="h-8 w-8 p-0" 
-              onClick={data.onEdit}
+              onClick={() => data.onEdit && data.onEdit(id)}
             >
               <Edit size={14} />
               <span className="sr-only">Edit</span>
@@ -74,7 +76,7 @@ const FamilyMemberNode = ({ data, isConnectable = true }: FamilyMemberNodeProps)
               variant="ghost" 
               size="sm" 
               className="h-8 w-8 p-0" 
-              onClick={data.onDelete}
+              onClick={() => data.onDelete && data.onDelete(id)}
             >
               <Trash2 size={14} />
               <span className="sr-only">Delete</span>
