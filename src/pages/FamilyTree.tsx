@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -84,6 +85,7 @@ const FamilyTree = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editError, setEditError] = useState<string | undefined>(undefined);
   const [currentEditNode, setCurrentEditNode] = useState<{
     id: string;
     name: string;
@@ -224,6 +226,9 @@ const FamilyTree = () => {
     console.log("Edit requested for ID:", id);
     console.log("Available nodes:", nodes.map(n => ({ id: n.id, nodeDataId: n.data.id, name: n.data.name })));
     
+    // Clear any previous errors
+    setEditError(undefined);
+    
     const node = nodes.find(node => node.data.id === id);
     if (node) {
       console.log("Found node to edit:", node);
@@ -233,54 +238,77 @@ const FamilyTree = () => {
         gender: node.data.gender,
         image: node.data.image,
         title: node.data.title,
-        relationship: node.data.relationship // Add relationship to edit modal
+        relationship: node.data.relationship
       });
       setIsEditModalOpen(true);
     } else {
       console.log("Node not found for id:", id);
+      setEditError("Could not find the member to edit.");
+      // Show error in toast and also set it for the modal if it's opened
       toast({
         title: 'Error',
         description: 'Could not find the family member to edit.',
         variant: 'destructive'
       });
+      // Still open the modal with error state to show the error in context
+      setIsEditModalOpen(true);
     }
   };
 
   const handleEditMemberSubmit = (values: EditMemberFormValues) => {
-    if (!currentEditNode) return;
+    if (!currentEditNode) {
+      setEditError("No member selected for editing.");
+      toast({
+        title: 'Error',
+        description: 'No member selected for editing.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     console.log("Updating node with ID:", currentEditNode.id, "Values:", values);
     
-    setNodes(nodes.map(node => {
-      if (node.data.id === currentEditNode.id) {
-        // Update the node data while preserving other properties
-        console.log("Updating node:", node.id);
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            name: values.name,
-            gender: values.gender,
-            image: values.image,
-            title: values.title,
-            // Do not update relationship as it should be read-only
-            // Preserve the callbacks and id
-            id: node.data.id,
-            onEdit: node.data.onEdit,
-            onDelete: node.data.onDelete,
-          }
-        };
-      }
-      return node;
-    }));
-    
-    toast({
-      title: 'Member updated',
-      description: `${values.name} has been updated in your family tree.`
-    });
-    
-    setIsEditModalOpen(false);
-    setCurrentEditNode(null);
+    try {
+      setNodes(nodes.map(node => {
+        if (node.data.id === currentEditNode.id) {
+          // Update the node data while preserving other properties
+          console.log("Updating node:", node.id);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              name: values.name,
+              gender: values.gender,
+              image: values.image,
+              title: values.title,
+              // Do not update relationship as it should be read-only
+              // Preserve the callbacks and id
+              id: node.data.id,
+              onEdit: node.data.onEdit,
+              onDelete: node.data.onDelete,
+            }
+          };
+        }
+        return node;
+      }));
+      
+      toast({
+        title: 'Member updated',
+        description: `${values.name} has been updated in your family tree.`
+      });
+      
+      setIsEditModalOpen(false);
+      setCurrentEditNode(null);
+      setEditError(undefined);
+    } catch (error) {
+      console.error("Error updating member:", error);
+      setEditError("Failed to update member. Please try again.");
+      toast({
+        title: 'Update failed',
+        description: 'Failed to update family member. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleDeleteMember = (id: string) => {
@@ -482,20 +510,23 @@ const FamilyTree = () => {
         isFirstMember={nodes.length === 0}
       />
       
-      {currentEditNode && (
-        <EditMemberModal
-          open={isEditModalOpen}
-          onOpenChange={setIsEditModalOpen}
-          onSubmit={handleEditMemberSubmit}
-          initialValues={{
-            name: currentEditNode.name,
-            gender: currentEditNode.gender,
-            image: currentEditNode.image,
-            title: currentEditNode.title,
-            relationship: currentEditNode.relationship // Pass relationship to modal
-          }}
-        />
-      )}
+      <EditMemberModal
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) {
+            // Clear error state when closing the modal
+            setEditError(undefined);
+          }
+        }}
+        onSubmit={handleEditMemberSubmit}
+        initialValues={currentEditNode || {
+          name: '',
+          gender: 'other',
+          relationship: ''
+        }}
+        error={editError}
+      />
     </div>
   );
 };

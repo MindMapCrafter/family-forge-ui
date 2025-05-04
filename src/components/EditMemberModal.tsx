@@ -22,6 +22,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 // Enhanced form schema with all relevant fields
 const formSchema = z.object({
@@ -45,6 +47,7 @@ interface EditMemberModalProps {
     title?: string;
     relationship?: string; // Add relationship to initialValues interface
   };
+  error?: string; // New error prop to display validation errors
 }
 
 const EditMemberModal = ({
@@ -52,6 +55,7 @@ const EditMemberModal = ({
   onOpenChange,
   onSubmit,
   initialValues,
+  error,
 }: EditMemberModalProps) => {
   const form = useForm<EditMemberFormValues>({
     resolver: zodResolver(formSchema),
@@ -63,12 +67,26 @@ const EditMemberModal = ({
     form.reset();
   };
 
+  React.useEffect(() => {
+    if (open && initialValues) {
+      form.reset(initialValues);
+    }
+  }, [form, initialValues, open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Family Member</DialogTitle>
         </DialogHeader>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <ScrollArea className="max-h-[70vh]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 px-1">
