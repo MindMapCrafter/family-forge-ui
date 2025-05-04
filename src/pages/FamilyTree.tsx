@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
   Controls, 
@@ -11,15 +11,17 @@ import ReactFlow, {
   Edge,
   Node,
   NodeTypes,
-  Panel
+  Panel,
+  ReactFlowInstance
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
-import { Plus, FileDown, FileUp, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Plus, FileDown, FileUp, RotateCcw, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import FamilyMemberNode from '@/components/FamilyMemberNode';
 import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal from '@/components/EditMemberModal';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
@@ -90,22 +92,39 @@ const FamilyTree = () => {
     image?: string;
     title?: string;
   } | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1', strokeWidth: 2 } }, eds));
   }, [setEdges]);
 
-  // Handle zoom in action
+  // Handle zoom in action with enhanced zooming
   const handleZoomIn = useCallback(() => {
-    const zoomInEvent = new WheelEvent('wheel', { deltaY: -100 });
-    document.dispatchEvent(zoomInEvent);
-  }, []);
+    if (reactFlowInstance) {
+      const currentZoom = reactFlowInstance.getZoom();
+      reactFlowInstance.zoomTo(currentZoom * 1.2);
+    }
+  }, [reactFlowInstance]);
 
-  // Handle zoom out action
+  // Handle zoom out action with enhanced zooming
   const handleZoomOut = useCallback(() => {
-    const zoomOutEvent = new WheelEvent('wheel', { deltaY: 100 });
-    document.dispatchEvent(zoomOutEvent);
+    if (reactFlowInstance) {
+      const currentZoom = reactFlowInstance.getZoom();
+      reactFlowInstance.zoomTo(currentZoom * 0.8);
+    }
+  }, [reactFlowInstance]);
+
+  // Handle fit view
+  const handleFitView = useCallback(() => {
+    if (reactFlowInstance) {
+      reactFlowInstance.fitView({ padding: 0.2, includeHiddenNodes: true });
+    }
+  }, [reactFlowInstance]);
+
+  const onInit = useCallback((instance: ReactFlowInstance) => {
+    setReactFlowInstance(instance);
   }, []);
 
   const handleAddMember = () => {
@@ -405,7 +424,7 @@ const FamilyTree = () => {
           </Button>
         </div>
       </div>
-      <div className="flex-grow">
+      <div className="flex-grow relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -413,11 +432,19 @@ const FamilyTree = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          onInit={onInit}
           fitView
-          minZoom={0.1}
-          maxZoom={4}
+          minZoom={0.05}  // Enhanced minimum zoom to see more of a large tree
+          maxZoom={8}     // Enhanced maximum zoom to see more details
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           attributionPosition="bottom-right"
+          className="w-full h-full"
+          panOnDrag={true}
+          panOnScroll={true}
+          zoomOnScroll={true}
+          zoomOnPinch={true}
+          zoomOnDoubleClick={true}
+          selectionOnDrag={false}
         >
           <Controls showInteractive={true} />
           <Panel position="top-right" className="bg-white p-2 rounded-md shadow-md flex gap-2">
@@ -426,6 +453,9 @@ const FamilyTree = () => {
             </Button>
             <Button variant="outline" size="sm" onClick={handleZoomOut}>
               <ZoomOut size={16} />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleFitView} title="Fit View">
+              <MoveHorizontal size={16} />
             </Button>
           </Panel>
           <MiniMap 
