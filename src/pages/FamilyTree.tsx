@@ -434,8 +434,8 @@ const FamilyTree = () => {
           nodeTypes={nodeTypes}
           onInit={onInit}
           fitView
-          minZoom={0.05}  // Enhanced minimum zoom to see more of a large tree
-          maxZoom={8}     // Enhanced maximum zoom to see more details
+          minZoom={0.01}  // Enhanced minimum zoom for extensive zoom-out capabilities
+          maxZoom={16}    // Enhanced maximum zoom for closer inspection
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           attributionPosition="bottom-right"
           className="w-full h-full"
@@ -445,13 +445,14 @@ const FamilyTree = () => {
           zoomOnPinch={true}
           zoomOnDoubleClick={true}
           selectionOnDrag={false}
+          style={{overflow: 'auto'}} // Enable scrollbars when content exceeds view
         >
           <Controls showInteractive={true} />
           <Panel position="top-right" className="bg-white p-2 rounded-md shadow-md flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleZoomIn}>
+            <Button variant="outline" size="sm" onClick={handleZoomIn} title="Zoom In">
               <ZoomIn size={16} />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleZoomOut}>
+            <Button variant="outline" size="sm" onClick={handleZoomOut} title="Zoom Out">
               <ZoomOut size={16} />
             </Button>
             <Button variant="outline" size="sm" onClick={handleFitView} title="Fit View">
