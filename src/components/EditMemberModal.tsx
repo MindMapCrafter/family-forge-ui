@@ -26,6 +26,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   gender: z.enum(['male', 'female', 'other']),
   image: z.string().optional(),
+  title: z.string().optional(), // Add title field to the schema
 });
 
 export type EditMemberFormValues = z.infer<typeof formSchema>;
@@ -38,6 +39,7 @@ interface EditMemberModalProps {
     name: string;
     gender?: 'male' | 'female' | 'other';
     image?: string;
+    title?: string; // Add title to initialValues interface
   };
 }
 
@@ -113,6 +115,21 @@ const EditMemberModal = ({
                   <FormLabel>Profile Image URL (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter image URL" {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Add title field */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter title (e.g. Prophet, Hazrat)" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
