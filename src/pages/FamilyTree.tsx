@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -20,7 +19,7 @@ import { Plus, FileDown, FileUp, RotateCcw, ZoomIn, ZoomOut, MoveHorizontal, Mov
 import { useToast } from '@/hooks/use-toast';
 import FamilyMemberNode from '@/components/FamilyMemberNode';
 import AddMemberModal from '@/components/AddMemberModal';
-import EditMemberModal from '@/components/EditMemberModal';
+import EditMemberModal, { EditMemberFormValues } from '@/components/EditMemberModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Register custom node types
@@ -91,6 +90,7 @@ const FamilyTree = () => {
     gender?: 'male' | 'female' | 'other';
     image?: string;
     title?: string;
+    relationship?: string; // Add relationship field
   } | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -232,7 +232,8 @@ const FamilyTree = () => {
         name: node.data.name,
         gender: node.data.gender,
         image: node.data.image,
-        title: node.data.title
+        title: node.data.title,
+        relationship: node.data.relationship // Add relationship to edit modal
       });
       setIsEditModalOpen(true);
     } else {
@@ -245,7 +246,7 @@ const FamilyTree = () => {
     }
   };
 
-  const handleEditMemberSubmit = (values: any) => {
+  const handleEditMemberSubmit = (values: EditMemberFormValues) => {
     if (!currentEditNode) return;
     
     console.log("Updating node with ID:", currentEditNode.id, "Values:", values);
@@ -262,6 +263,7 @@ const FamilyTree = () => {
             gender: values.gender,
             image: values.image,
             title: values.title,
+            // Do not update relationship as it should be read-only
             // Preserve the callbacks and id
             id: node.data.id,
             onEdit: node.data.onEdit,
@@ -489,7 +491,8 @@ const FamilyTree = () => {
             name: currentEditNode.name,
             gender: currentEditNode.gender,
             image: currentEditNode.image,
-            title: currentEditNode.title
+            title: currentEditNode.title,
+            relationship: currentEditNode.relationship // Pass relationship to modal
           }}
         />
       )}
