@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FamilyMemberData {
   name: string;
@@ -14,6 +15,7 @@ interface FamilyMemberData {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   id: string;
+  title?: string; // Added title field for prophets, etc.
 }
 
 interface FamilyMemberNodeProps {
@@ -23,11 +25,11 @@ interface FamilyMemberNodeProps {
 }
 
 const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodeProps) => {
-  // Determine background color based on gender
+  // Determine border color based on gender
   const getBorderColor = () => {
     switch (data.gender) {
-      case 'male': return 'border-blue-200';
-      case 'female': return 'border-pink-200';
+      case 'male': return 'border-blue-300';
+      case 'female': return 'border-pink-300';
       default: return '';
     }
   };
@@ -50,22 +52,34 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
   console.log('Node render:', { id, dataId: data.id, data });
 
   return (
-    <div className="min-w-[180px]">
+    <div className="min-w-[200px] max-w-[250px]">
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
       <Card className={`p-3 border-2 shadow-sm ${getBorderColor()} ${getBackgroundColor()}`}>
         <div className="flex flex-col items-center">
-          <Avatar className="h-12 w-12 mb-2">
+          <Avatar className="h-14 w-14 mb-2">
             <AvatarImage src={data.image} alt={data.name} />
             <AvatarFallback>{getNameInitials()}</AvatarFallback>
           </Avatar>
-          <div className="font-medium text-center">{data.name}</div>
-          <div className="text-xs text-muted-foreground text-center">{data.relationship}</div>
-          {data.gender && (
-            <div className="text-xs text-muted-foreground text-center mb-2">
-              {data.gender.charAt(0).toUpperCase() + data.gender.slice(1)}
-            </div>
-          )}
-          <div className="flex justify-center gap-2 mt-1">
+          
+          <ScrollArea className="w-full max-h-[80px]">
+            <div className="font-medium text-center break-words">{data.name}</div>
+            
+            {data.title && (
+              <div className="text-xs font-semibold text-center text-primary mt-1">
+                {data.title}
+              </div>
+            )}
+            
+            <div className="text-xs text-muted-foreground text-center mt-1">{data.relationship}</div>
+            
+            {data.gender && (
+              <div className="text-xs text-muted-foreground text-center mb-2">
+                {data.gender.charAt(0).toUpperCase() + data.gender.slice(1)}
+              </div>
+            )}
+          </ScrollArea>
+          
+          <div className="flex justify-center gap-2 mt-2">
             <Button 
               variant="ghost" 
               size="sm" 

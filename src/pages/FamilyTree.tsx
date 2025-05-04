@@ -10,11 +10,12 @@ import ReactFlow, {
   Connection,
   Edge,
   Node,
-  NodeTypes
+  NodeTypes,
+  Panel
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
-import { Plus, FileDown, FileUp, RotateCcw } from 'lucide-react';
+import { Plus, FileDown, FileUp, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import FamilyMemberNode from '@/components/FamilyMemberNode';
 import AddMemberModal from '@/components/AddMemberModal';
@@ -39,9 +40,9 @@ const calculateNodePosition = (
     return { x: 0, y: 0 }; // Center for the first node
   }
 
-  // Default spacing
-  const horizontalSpacing = 250;
-  const verticalSpacing = 150;
+  // Increased spacing for better readability in large trees
+  const horizontalSpacing = 300;
+  const verticalSpacing = 200;
 
   // Base position is the related node's position
   const baseX = relatedNode.position.x;
@@ -87,19 +88,32 @@ const FamilyTree = () => {
     name: string;
     gender?: 'male' | 'female' | 'other';
     image?: string;
+    title?: string;
   } | null>(null);
   const { toast } = useToast();
   
   const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1' } }, eds));
+    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1', strokeWidth: 2 } }, eds));
   }, [setEdges]);
+
+  // Handle zoom in action
+  const handleZoomIn = useCallback(() => {
+    const zoomInEvent = new WheelEvent('wheel', { deltaY: -100 });
+    document.dispatchEvent(zoomInEvent);
+  }, []);
+
+  // Handle zoom out action
+  const handleZoomOut = useCallback(() => {
+    const zoomOutEvent = new WheelEvent('wheel', { deltaY: 100 });
+    document.dispatchEvent(zoomOutEvent);
+  }, []);
 
   const handleAddMember = () => {
     setIsAddModalOpen(true);
   };
 
   const handleAddMemberSubmit = (values: any) => {
-    const { name, relationship, relatedTo, gender, image } = values;
+    const { name, relationship, relatedTo, gender, image, title } = values;
     
     // Generate a unique ID for the new node
     const newId = `member-${Date.now()}`;
@@ -114,6 +128,7 @@ const FamilyTree = () => {
           relationship: 'Root',
           gender,
           image,
+          title,
           id: newId,
           onEdit: (id: string) => handleEditMember(id),
           onDelete: (id: string) => handleDeleteMember(id),
@@ -153,6 +168,7 @@ const FamilyTree = () => {
         relationship: relationship.charAt(0).toUpperCase() + relationship.slice(1),
         gender,
         image,
+        title,
         id: newId,
         onEdit: (id: string) => handleEditMember(id),
         onDelete: (id: string) => handleDeleteMember(id),
@@ -168,7 +184,7 @@ const FamilyTree = () => {
         source: relationship === 'child' ? relatedTo : newId,
         target: relationship === 'child' ? newId : relatedTo,
         animated: true,
-        style: { stroke: '#6366F1' }
+        style: { stroke: '#6366F1', strokeWidth: 2 }
       };
     }
     
@@ -196,7 +212,8 @@ const FamilyTree = () => {
         id: node.data.id,
         name: node.data.name,
         gender: node.data.gender,
-        image: node.data.image
+        image: node.data.image,
+        title: node.data.title
       });
       setIsEditModalOpen(true);
     } else {
@@ -225,6 +242,7 @@ const FamilyTree = () => {
             name: values.name,
             gender: values.gender,
             image: values.image,
+            title: values.title,
             // Preserve the callbacks and id
             id: node.data.id,
             onEdit: node.data.onEdit,
@@ -322,6 +340,7 @@ const FamilyTree = () => {
         relationship: node.data.relationship,
         gender: node.data.gender,
         image: node.data.image,
+        title: node.data.title,
         id: node.data.id, // Preserve the id in data for reimporting
       }
     }));
@@ -366,7 +385,7 @@ const FamilyTree = () => {
   return (
     <div className="w-full h-screen flex flex-col">
       <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold">Family Tree</h1>
+        <h1 className="text-2xl font-bold">Prophet Family Tree</h1>
         <div className="flex flex-wrap gap-2 mt-4">
           <Button onClick={handleAddMember} className="flex gap-1 items-center">
             <Plus size={16} />
@@ -395,10 +414,30 @@ const FamilyTree = () => {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           fitView
+          minZoom={0.1}
+          maxZoom={4}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          attributionPosition="bottom-right"
         >
-          <Controls />
-          <MiniMap />
-          <Background color="#aaa" gap={16} />
+          <Controls showInteractive={true} />
+          <Panel position="top-right" className="bg-white p-2 rounded-md shadow-md flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleZoomIn}>
+              <ZoomIn size={16} />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleZoomOut}>
+              <ZoomOut size={16} />
+            </Button>
+          </Panel>
+          <MiniMap 
+            nodeStrokeColor={(n) => {
+              return n.data.gender === 'male' ? '#93c5fd' : n.data.gender === 'female' ? '#fbcfe8' : '#d1d5db';
+            }}
+            nodeColor={(n) => {
+              return n.data.gender === 'male' ? '#dbeafe' : n.data.gender === 'female' ? '#fce7f3' : '#f3f4f6';
+            }}
+            maskColor="rgba(240, 240, 240, 0.6)"
+          />
+          <Background color="#aaa" gap={16} size={1} />
         </ReactFlow>
       </div>
       
@@ -418,7 +457,8 @@ const FamilyTree = () => {
           initialValues={{
             name: currentEditNode.name,
             gender: currentEditNode.gender,
-            image: currentEditNode.image
+            image: currentEditNode.image,
+            title: currentEditNode.title
           }}
         />
       )}
