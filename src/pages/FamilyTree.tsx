@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -128,6 +129,104 @@ const FamilyTree = () => {
     setReactFlowInstance(instance);
   }, []);
 
+  // Find related members for a given node ID
+  const findRelatedMembers = (nodeId: string) => {
+    const relatedMembers = {
+      parents: [] as {id: string, name: string}[],
+      children: [] as {id: string, name: string}[],
+      spouses: [] as {id: string, name: string}[],
+      siblings: [] as {id: string, name: string}[],
+    };
+    
+    edges.forEach(edge => {
+      const currentNode = nodes.find(node => node.id === nodeId);
+      if (!currentNode) return;
+      
+      if (edge.target === nodeId) { // The other node points to this node
+        const sourceNode = nodes.find(node => node.id === edge.source);
+        if (sourceNode) {
+          const relation = sourceNode.data.relationship.toLowerCase();
+          
+          if (relation === 'parent' || relation === 'father' || relation === 'mother' || 
+              relation === 'grandfather' || relation === 'grandmother') {
+            relatedMembers.parents.push({ id: sourceNode.id, name: sourceNode.data.name });
+          } else if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
+            relatedMembers.spouses.push({ id: sourceNode.id, name: sourceNode.data.name });
+          } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
+            relatedMembers.siblings.push({ id: sourceNode.id, name: sourceNode.data.name });
+          }
+        }
+      }
+      
+      if (edge.source === nodeId) { // This node points to another node
+        const targetNode = nodes.find(node => node.id === edge.target);
+        if (targetNode) {
+          const relation = targetNode.data.relationship.toLowerCase();
+          
+          if (relation === 'child' || relation === 'son' || relation === 'daughter') {
+            relatedMembers.children.push({ id: targetNode.id, name: targetNode.data.name });
+          } else if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
+            relatedMembers.spouses.push({ id: targetNode.id, name: targetNode.data.name });
+          } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
+            relatedMembers.siblings.push({ id: targetNode.id, name: targetNode.data.name });
+          }
+        }
+      }
+    });
+    
+    return relatedMembers;
+  };
+
+  // Generate contextual relation description
+  const generateRelationContext = (nodeId: string, relationship: string) => {
+    if (relationship.toLowerCase() === 'root') return 'Root Member';
+    
+    const relatedMembers = findRelatedMembers(nodeId);
+    const relationship_lc = relationship.toLowerCase();
+    
+    if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
+      if (relatedMembers.parents.length > 0) {
+        const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
+        return `${relationship} of ${parentNames}`;
+      }
+    } else if (relationship_lc === 'parent' || relationship_lc === 'father' || relationship_lc === 'mother') {
+      if (relatedMembers.children.length > 0) {
+        const childNames = relatedMembers.children.map(c => c.name).join(', ');
+        return `${relationship} of ${childNames}`;
+      }
+    } else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
+      if (relatedMembers.spouses.length > 0) {
+        const spouseNames = relatedMembers.spouses.map(s => s.name).join(' & ');
+        return `${relationship} of ${spouseNames}`;
+      }
+    } else if (relationship_lc === 'sibling' || relationship_lc === 'brother' || relationship_lc === 'sister') {
+      if (relatedMembers.siblings.length > 0) {
+        const siblingNames = relatedMembers.siblings.map(s => s.name).join(', ');
+        return `${relationship} of ${siblingNames}`;
+      }
+    }
+    
+    return relationship;
+  };
+
+  // Update node relation contexts
+  const updateAllNodeRelationContexts = () => {
+    setNodes(currentNodes => currentNodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        relationContext: generateRelationContext(node.id, node.data.relationship)
+      }
+    })));
+  };
+
+  // Update contexts whenever nodes or edges change
+  React.useEffect(() => {
+    if (nodes.length > 0) {
+      updateAllNodeRelationContexts();
+    }
+  }, [nodes.length, edges.length]);
+
   const handleAddMember = () => {
     setIsAddModalOpen(true);
   };
@@ -146,6 +245,7 @@ const FamilyTree = () => {
         data: {
           name,
           relationship: 'Root',
+          relationContext: 'Root Member',
           gender,
           image,
           title,
@@ -219,6 +319,11 @@ const FamilyTree = () => {
     });
     
     setIsAddModalOpen(false);
+    
+    // Update relation contexts after a small delay to ensure nodes and edges are updated
+    setTimeout(() => {
+      updateAllNodeRelationContexts();
+    }, 100);
   };
 
   const handleEditMember = (id: string) => {
@@ -294,6 +399,11 @@ const FamilyTree = () => {
       setIsEditModalOpen(false);
       setCurrentEditNode(null);
       setEditError(undefined);
+      
+      // Update relation contexts after editing
+      setTimeout(() => {
+        updateAllNodeRelationContexts();
+      }, 100);
     } catch (error) {
       console.error("Error updating member:", error);
       setEditError("Failed to update member. Please try again.");
@@ -313,6 +423,11 @@ const FamilyTree = () => {
         title: 'Member deleted',
         description: 'Family member has been removed from the tree.'
       });
+      
+      // Update relation contexts after deletion
+      setTimeout(() => {
+        updateAllNodeRelationContexts();
+      }, 100);
     }
   };
 
