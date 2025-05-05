@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,7 +23,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Upload, Image, X } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // Enhanced form schema with all relevant fields
 const formSchema = z.object({
@@ -31,7 +32,7 @@ const formSchema = z.object({
   gender: z.enum(['male', 'female', 'other']),
   image: z.string().optional(),
   title: z.string().optional(),
-  relationship: z.string().optional(), // Add relationship field
+  relationship: z.string().optional(),
 });
 
 export type EditMemberFormValues = z.infer<typeof formSchema>;
@@ -45,9 +46,9 @@ interface EditMemberModalProps {
     gender?: 'male' | 'female' | 'other';
     image?: string;
     title?: string;
-    relationship?: string; // Add relationship to initialValues interface
+    relationship?: string;
   };
-  error?: string; // New error prop to display validation errors
+  error?: string;
 }
 
 const EditMemberModal = ({
@@ -57,19 +58,59 @@ const EditMemberModal = ({
   initialValues,
   error,
 }: EditMemberModalProps) => {
+  const [imagePreview, setImagePreview] = useState<string | null>(initialValues.image || null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+
   const form = useForm<EditMemberFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialValues,
   });
 
   const handleSubmit = (values: EditMemberFormValues) => {
-    onSubmit(values);
+    onSubmit({ 
+      ...values, 
+      image: imagePreview || values.image
+    });
     form.reset();
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUploadError(null);
+    const file = e.target.files?.[0];
+    
+    if (!file) return;
+    
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setImageUploadError("Image size must be less than 2MB");
+      return;
+    }
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setImageUploadError("Only JPG, PNG and WEBP formats are supported");
+      return;
+    }
+    
+    // Create a preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    form.setValue('image', '');
   };
 
   React.useEffect(() => {
     if (open && initialValues) {
       form.reset(initialValues);
+      setImagePreview(initialValues.image || null);
+      setImageUploadError(null);
     }
   }, [form, initialValues, open]);
 
@@ -144,19 +185,70 @@ const EditMemberModal = ({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="image"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Profile Image URL (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter image URL" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormItem>
+                <FormLabel>Profile Picture</FormLabel>
+                <div className="flex flex-col items-center space-y-3">
+                  {imagePreview ? (
+                    <div className="flex flex-col items-center">
+                      <Avatar className="h-24 w-24">
+                        <AvatarImage src={imagePreview} alt="Preview" />
+                        <AvatarFallback>
+                          {initialValues.name?.charAt(0).toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2" 
+                        onClick={removeImage}
+                        type="button"
+                      >
+                        <X size={14} className="mr-1" /> Remove Photo
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <div className="border-2 border-dashed border-gray-300 rounded-full h-24 w-24 flex items-center justify-center bg-gray-50">
+                        <Image size={32} className="text-gray-400" />
+                      </div>
+                      <label htmlFor="image-upload" className="cursor-pointer">
+                        <div className="mt-2 flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
+                          <Upload size={14} className="mr-1" /> Upload Photo
+                        </div>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp"
+                          className="sr-only"
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                    </div>
+                  )}
+                  
+                  {imagePreview && (
+                    <label htmlFor="image-upload" className="cursor-pointer">
+                      <div className="flex items-center justify-center rounded-md bg-secondary px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-secondary/90">
+                        <Upload size={14} className="mr-1" /> Change Photo
+                      </div>
+                      <input
+                        id="image-upload"
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        className="sr-only"
+                        onChange={handleImageUpload}
+                      />
+                    </label>
+                  )}
+                  
+                  {imageUploadError && (
+                    <p className="text-red-500 text-sm">{imageUploadError}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: JPG, PNG, WEBP (max 2MB)
+                  </p>
+                </div>
+              </FormItem>
 
               <FormField
                 control={form.control}

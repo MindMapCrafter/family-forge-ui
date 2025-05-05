@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -92,7 +91,7 @@ const FamilyTree = () => {
     gender?: 'male' | 'female' | 'other';
     image?: string;
     title?: string;
-    relationship?: string; // Add relationship field
+    relationship?: string;
   } | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -244,13 +243,11 @@ const FamilyTree = () => {
     } else {
       console.log("Node not found for id:", id);
       setEditError("Could not find the member to edit.");
-      // Show error in toast and also set it for the modal if it's opened
       toast({
         title: 'Error',
         description: 'Could not find the family member to edit.',
         variant: 'destructive'
       });
-      // Still open the modal with error state to show the error in context
       setIsEditModalOpen(true);
     }
   };
@@ -271,7 +268,6 @@ const FamilyTree = () => {
     try {
       setNodes(nodes.map(node => {
         if (node.data.id === currentEditNode.id) {
-          // Update the node data while preserving other properties
           console.log("Updating node:", node.id);
           return {
             ...node,
@@ -281,8 +277,6 @@ const FamilyTree = () => {
               gender: values.gender,
               image: values.image,
               title: values.title,
-              // Do not update relationship as it should be read-only
-              // Preserve the callbacks and id
               id: node.data.id,
               onEdit: node.data.onEdit,
               onDelete: node.data.onDelete,
@@ -313,12 +307,8 @@ const FamilyTree = () => {
 
   const handleDeleteMember = (id: string) => {
     if (window.confirm('Are you sure you want to delete this family member?')) {
-      // Remove the node
       setNodes(nodes.filter(node => node.data.id !== id));
-      
-      // Remove any connected edges
       setEdges(edges.filter(edge => edge.source !== id && edge.target !== id));
-      
       toast({
         title: 'Member deleted',
         description: 'Family member has been removed from the tree.'
@@ -327,7 +317,6 @@ const FamilyTree = () => {
   };
 
   const handleImport = () => {
-    // Create a file input element
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'application/json';
@@ -339,12 +328,11 @@ const FamilyTree = () => {
           try {
             const importedData = JSON.parse(event.target?.result as string);
             if (importedData.nodes && importedData.edges) {
-              // Add interaction callbacks to nodes
               const processedNodes = importedData.nodes.map((node: Node) => ({
                 ...node,
                 data: {
                   ...node.data,
-                  id: node.id, // Ensure the id is set on the data object
+                  id: node.id,
                   onEdit: (id: string) => handleEditMember(id),
                   onDelete: (id: string) => handleDeleteMember(id),
                 }
@@ -381,7 +369,6 @@ const FamilyTree = () => {
       return;
     }
     
-    // Clean up node data for export (remove callbacks)
     const cleanNodes = nodes.map(node => ({
       ...node,
       data: {
@@ -390,7 +377,7 @@ const FamilyTree = () => {
         gender: node.data.gender,
         image: node.data.image,
         title: node.data.title,
-        id: node.data.id, // Preserve the id in data for reimporting
+        id: node.data.id,
       }
     }));
     
@@ -464,8 +451,8 @@ const FamilyTree = () => {
           nodeTypes={nodeTypes}
           onInit={onInit}
           fitView
-          minZoom={0.01}  // Enhanced minimum zoom for extensive zoom-out capabilities
-          maxZoom={16}    // Enhanced maximum zoom for closer inspection
+          minZoom={0.01}
+          maxZoom={16}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           attributionPosition="bottom-right"
           className="w-full h-full"
@@ -475,7 +462,7 @@ const FamilyTree = () => {
           zoomOnPinch={true}
           zoomOnDoubleClick={true}
           selectionOnDrag={false}
-          style={{overflow: 'auto'}} // Enable scrollbars when content exceeds view
+          style={{overflow: 'auto'}}
         >
           <Controls showInteractive={true} />
           <Panel position="top-right" className="bg-white p-2 rounded-md shadow-md flex gap-2">
@@ -515,7 +502,6 @@ const FamilyTree = () => {
         onOpenChange={(open) => {
           setIsEditModalOpen(open);
           if (!open) {
-            // Clear error state when closing the modal
             setEditError(undefined);
           }
         }}
