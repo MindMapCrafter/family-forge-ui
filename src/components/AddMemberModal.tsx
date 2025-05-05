@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,6 +63,7 @@ const AddMemberModal = ({
   isFirstMember 
 }: AddMemberModalProps) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
   const form = useForm<FormValues>({
@@ -75,6 +76,24 @@ const AddMemberModal = ({
       image: undefined,
     },
   });
+
+  // Reset form when modal is opened or closed
+  React.useEffect(() => {
+    if (!open) {
+      // Only reset when closing to prevent issues during open
+      setTimeout(() => {
+        form.reset();
+        setPreviewImage(null);
+      }, 300); // Small delay to ensure animation completes
+    }
+  }, [open, form]);
+
+  const handleImageUploadClick = () => {
+    // Programmatically click the hidden file input
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,6 +109,10 @@ const AddMemberModal = ({
         description: 'The image must be less than 2MB',
         variant: 'destructive',
       });
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
     
@@ -100,6 +123,10 @@ const AddMemberModal = ({
         description: 'Please upload JPG, PNG, or WEBP files only',
         variant: 'destructive',
       });
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
     
@@ -121,8 +148,7 @@ const AddMemberModal = ({
     };
     
     onSubmit(submissionValues);
-    form.reset();
-    setPreviewImage(null);
+    // Form reset is handled by the useEffect when modal closes
   };
 
   return (
@@ -151,31 +177,24 @@ const AddMemberModal = ({
                 )}
               </Avatar>
               
-              <FormField
-                control={form.control}
-                name="image"
-                render={({ field: { onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel className="cursor-pointer">
-                      <Button variant="outline" type="button" className="gap-2">
-                        <Upload size={16} />
-                        {previewImage ? 'Change Photo' : 'Upload Photo'}
-                      </Button>
-                      <Input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={(e) => {
-                          handleImageChange(e);
-                          onChange(e);
-                        }}
-                        {...field}
-                      />
-                    </FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleImageChange}
               />
+              
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleImageUploadClick}
+                className="gap-2"
+              >
+                <Upload size={16} />
+                {previewImage ? 'Change Photo' : 'Upload Photo'}
+              </Button>
             </div>
             
             <FormField
