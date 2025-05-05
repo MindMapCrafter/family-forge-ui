@@ -15,7 +15,7 @@ interface FamilyMemberData {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   id: string;
-  title?: string; // Added title field for prophets, etc.
+  title?: string;
 }
 
 interface FamilyMemberNodeProps {
@@ -48,6 +48,12 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
     return data.name.charAt(0).toUpperCase();
   };
 
+  // Format gender to display properly
+  const formatGender = () => {
+    if (!data.gender) return null;
+    return data.gender.charAt(0).toUpperCase() + data.gender.slice(1);
+  };
+
   // For debugging
   console.log('Node render:', { id, dataId: data.id, data });
 
@@ -56,30 +62,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
       <Card className={`p-3 border-2 shadow-sm ${getBorderColor()} ${getBackgroundColor()}`}>
         <div className="flex flex-col items-center">
-          <Avatar className="h-14 w-14 mb-2">
-            <AvatarImage src={data.image} alt={data.name} />
-            <AvatarFallback>{getNameInitials()}</AvatarFallback>
-          </Avatar>
-          
-          <ScrollArea className="w-full max-h-[80px]">
-            <div className="font-medium text-center break-words">{data.name}</div>
-            
-            {data.title && (
-              <div className="text-xs font-semibold text-center text-primary mt-1">
-                {data.title}
-              </div>
-            )}
-            
-            <div className="text-xs text-muted-foreground text-center mt-1">{data.relationship}</div>
-            
-            {data.gender && (
-              <div className="text-xs text-muted-foreground text-center mb-2">
-                {data.gender.charAt(0).toUpperCase() + data.gender.slice(1)}
-              </div>
-            )}
-          </ScrollArea>
-          
-          <div className="flex justify-center gap-2 mt-2">
+          <div className="flex justify-center gap-2 mb-2">
             <Button 
               variant="ghost" 
               size="sm" 
@@ -92,6 +75,10 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               <Edit size={14} />
               <span className="sr-only">Edit</span>
             </Button>
+            <Avatar className="h-14 w-14">
+              <AvatarImage src={data.image} alt={data.name} />
+              <AvatarFallback>{getNameInitials()}</AvatarFallback>
+            </Avatar>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -105,6 +92,30 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               <span className="sr-only">Delete</span>
             </Button>
           </div>
+          
+          <ScrollArea className="w-full max-h-[100px] px-1">
+            <div className="text-sm mb-1">
+              <span className="font-semibold">Name:</span> {data.name}
+            </div>
+            
+            {formatGender() && (
+              <div className="text-sm mb-1">
+                <span className="font-semibold">Gender:</span> {formatGender()}
+              </div>
+            )}
+            
+            {data.relationship && (
+              <div className="text-sm mb-1">
+                <span className="font-semibold">Relation:</span> {data.relationship}
+              </div>
+            )}
+            
+            {data.title && (
+              <div className="text-sm font-semibold text-primary mt-1">
+                {data.title}
+              </div>
+            )}
+          </ScrollArea>
         </div>
       </Card>
       <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} />
