@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 import FamilyMemberNode from '@/components/FamilyMemberNode';
 import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal, { EditMemberFormValues } from '@/components/EditMemberModal';
+import LanguageSelector from '@/components/LanguageSelector';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
@@ -96,6 +98,7 @@ const FamilyTree = () => {
   const [hiddenChildren, setHiddenChildren] = useState<{[nodeId: string]: boolean}>({});
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { t } = useLanguage();
   
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1', strokeWidth: 2 } }, eds));
@@ -140,28 +143,91 @@ const FamilyTree = () => {
     return childIds;
   }, [edges]);
 
-  // Find related members for a given node ID
+  // Get parent nodes for a child node
+  const getParentNodesIds = useCallback((childId: string) => {
+    const parentIds: string[] = [];
+    edges.forEach(edge => {
+      // Parent edges are when the child is the target
+      if (edge.target === childId) {
+        parentIds.push(edge.source);
+      }
+    });
+    return parentIds;
+  }, [edges]);
+
+  // Get grandparent nodes for a child node
+  const getGrandparentNodesIds = useCallback((childId: string) => {
+    const parentIds = getParentNodesIds(childId);
+    const grandparentIds: string[] = [];
+    
+    parentIds.forEach(parentId => {
+      const grandparents = getParentNodesIds(parentId);
+      grandparentIds.push(...grandparents);
+    });
+    
+    return grandparentIds;
+  }, [getParentNodesIds]);
+
+  // Find related members for a given node ID with expanded hierarchy
   const findRelatedMembers = useCallback((nodeId: string) => {
     const relatedMembers = {
       parents: [] as {id: string, name: string}[],
       children: [] as {id: string, name: string}[],
       spouses: [] as {id: string, name: string}[],
       siblings: [] as {id: string, name: string}[],
+      grandparents: [] as {id: string, name: string}[],
+      grandchildren: [] as {id: string, name: string}[]
     };
     
+    // Get direct parents
+    const parentIds = getParentNodesIds(nodeId);
+    parentIds.forEach(parentId => {
+      const parentNode = nodes.find(node => node.id === parentId);
+      if (parentNode) {
+        relatedMembers.parents.push({ id: parentNode.id, name: parentNode.data.name });
+      }
+    });
+    
+    // Get direct children
+    const childIds = getChildNodesIds(nodeId);
+    childIds.forEach(childId => {
+      const childNode = nodes.find(node => node.id === childId);
+      if (childNode) {
+        relatedMembers.children.push({ id: childNode.id, name: childNode.data.name });
+      }
+    });
+    
+    // Get grandparents
+    const grandparentIds = getGrandparentNodesIds(nodeId);
+    grandparentIds.forEach(grandparentId => {
+      const grandparentNode = nodes.find(node => node.id === grandparentId);
+      if (grandparentNode) {
+        relatedMembers.grandparents.push({ id: grandparentNode.id, name: grandparentNode.data.name });
+      }
+    });
+    
+    // Get grandchildren
+    childIds.forEach(childId => {
+      const grandchildIds = getChildNodesIds(childId);
+      grandchildIds.forEach(grandchildId => {
+        const grandchildNode = nodes.find(node => node.id === grandchildId);
+        if (grandchildNode) {
+          relatedMembers.grandchildren.push({ id: grandchildNode.id, name: grandchildNode.data.name });
+        }
+      });
+    });
+    
+    // Get spouses and siblings
     edges.forEach(edge => {
       const currentNode = nodes.find(node => node.id === nodeId);
       if (!currentNode) return;
       
       if (edge.target === nodeId) { // The other node points to this node
         const sourceNode = nodes.find(node => node.id === edge.source);
-        if (sourceNode) {
+        if (sourceNode && sourceNode.data.relationship) {
           const relation = sourceNode.data.relationship.toLowerCase();
           
-          if (relation === 'parent' || relation === 'father' || relation === 'mother' || 
-              relation === 'grandfather' || relation === 'grandmother') {
-            relatedMembers.parents.push({ id: sourceNode.id, name: sourceNode.data.name });
-          } else if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
+          if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
             relatedMembers.spouses.push({ id: sourceNode.id, name: sourceNode.data.name });
           } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
             relatedMembers.siblings.push({ id: sourceNode.id, name: sourceNode.data.name });
@@ -171,12 +237,10 @@ const FamilyTree = () => {
       
       if (edge.source === nodeId) { // This node points to another node
         const targetNode = nodes.find(node => node.id === edge.target);
-        if (targetNode) {
+        if (targetNode && targetNode.data.relationship) {
           const relation = targetNode.data.relationship.toLowerCase();
           
-          if (relation === 'child' || relation === 'son' || relation === 'daughter') {
-            relatedMembers.children.push({ id: targetNode.id, name: targetNode.data.name });
-          } else if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
+          if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
             relatedMembers.spouses.push({ id: targetNode.id, name: targetNode.data.name });
           } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
             relatedMembers.siblings.push({ id: targetNode.id, name: targetNode.data.name });
@@ -186,31 +250,49 @@ const FamilyTree = () => {
     });
     
     return relatedMembers;
-  }, [nodes, edges]);
+  }, [nodes, edges, getParentNodesIds, getChildNodesIds, getGrandparentNodesIds]);
 
-  // Generate contextual relation description with improved formatting
+  // Generate contextual relation description with improved formatting and hierarchy
   const generateRelationContext = useCallback((nodeId: string, relationship: string) => {
     if (relationship.toLowerCase() === 'root') return 'Root Member';
     
     const relatedMembers = findRelatedMembers(nodeId);
     const relationship_lc = relationship.toLowerCase();
+    const relationContexts: string[] = [];
     
-    // Handle child relationship
+    // Handle child relationship with parents
     if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
       if (relatedMembers.parents.length > 0) {
         const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        return `Child of ${parentNames}`;
+        relationContexts.push(`Child of ${parentNames}`);
+      }
+      
+      // Add grandparent relation
+      if (relatedMembers.grandparents.length > 0) {
+        const grandparentNames = relatedMembers.grandparents.map(p => p.name).join(' & ');
+        relationContexts.push(`Grandchild of ${grandparentNames}`);
       }
     } 
-    // Handle parent relationship
+    // Handle parent relationship with children
     else if (relationship_lc === 'parent' || relationship_lc === 'father' || relationship_lc === 'mother') {
       if (relatedMembers.children.length > 0) {
         const childNames = relatedMembers.children.map(c => c.name);
         if (childNames.length === 1) {
-          return `Parent of ${childNames[0]}`;
+          relationContexts.push(`Parent of ${childNames[0]}`);
         } else if (childNames.length > 1) {
           const lastChild = childNames.pop();
-          return `Parent of ${childNames.join(', ')} & ${lastChild}`;
+          relationContexts.push(`Parent of ${childNames.join(', ')} & ${lastChild}`);
+        }
+      }
+      
+      // Add grandchildren relation
+      if (relatedMembers.grandchildren.length > 0) {
+        const grandchildNames = relatedMembers.grandchildren.map(c => c.name);
+        if (grandchildNames.length === 1) {
+          relationContexts.push(`Grandparent of ${grandchildNames[0]}`);
+        } else if (grandchildNames.length > 1) {
+          const lastGrandchild = grandchildNames.pop();
+          relationContexts.push(`Grandparent of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
         }
       }
     } 
@@ -218,7 +300,7 @@ const FamilyTree = () => {
     else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
       if (relatedMembers.spouses.length > 0) {
         const spouseNames = relatedMembers.spouses.map(s => s.name).join(' & ');
-        return `Spouse of ${spouseNames}`;
+        relationContexts.push(`Spouse of ${spouseNames}`);
       }
     } 
     // Handle sibling relationship
@@ -226,10 +308,10 @@ const FamilyTree = () => {
       if (relatedMembers.siblings.length > 0) {
         const siblingNames = relatedMembers.siblings.map(s => s.name);
         if (siblingNames.length === 1) {
-          return `Sibling of ${siblingNames[0]}`;
+          relationContexts.push(`Sibling of ${siblingNames[0]}`);
         } else if (siblingNames.length > 1) {
           const lastSibling = siblingNames.pop();
-          return `Sibling of ${siblingNames.join(', ')} & ${lastSibling}`;
+          relationContexts.push(`Sibling of ${siblingNames.join(', ')} & ${lastSibling}`);
         }
       }
     }
@@ -238,10 +320,10 @@ const FamilyTree = () => {
       if (relatedMembers.children.length > 0) {
         const grandchildNames = relatedMembers.children.map(c => c.name);
         if (grandchildNames.length === 1) {
-          return `${relationship} of ${grandchildNames[0]}`;
+          relationContexts.push(`${relationship} of ${grandchildNames[0]}`);
         } else if (grandchildNames.length > 1) {
           const lastGrandchild = grandchildNames.pop();
-          return `${relationship} of ${grandchildNames.join(', ')} & ${lastGrandchild}`;
+          relationContexts.push(`${relationship} of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
         }
       }
     }
@@ -249,11 +331,11 @@ const FamilyTree = () => {
     else if (relationship_lc === 'grandchild' || relationship_lc === 'grandson' || relationship_lc === 'granddaughter') {
       if (relatedMembers.parents.length > 0) {
         const grandparentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        return `${relationship} of ${grandparentNames}`;
+        relationContexts.push(`${relationship} of ${grandparentNames}`);
       }
     }
     
-    return relationship;
+    return relationContexts.join('; ') || relationship;
   }, [findRelatedMembers]);
 
   // Handle hiding/showing children nodes
@@ -316,10 +398,7 @@ const FamilyTree = () => {
     }
   }, [nodes.length, edges.length, updateAllNodeProperties]);
 
-  const handleAddMember = () => {
-    setIsAddModalOpen(true);
-  };
-
+  // Handle adding a new member
   const handleAddMemberSubmit = (values: any) => {
     const { name, relationship, relatedTo, gender, image, title } = values;
     
@@ -639,23 +718,26 @@ const FamilyTree = () => {
   return (
     <div className="w-full h-screen flex flex-col">
       <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold">Prophet Family Tree</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Prophet Family Tree</h1>
+          <LanguageSelector />
+        </div>
         <div className="flex flex-wrap gap-2 mt-4">
           <Button onClick={handleAddMember} className="flex gap-1 items-center">
             <Plus size={16} />
-            Add Member
+            {t.addMember}
           </Button>
           <Button onClick={handleImport} variant="outline" className="flex gap-1 items-center">
             <FileUp size={16} />
-            Import
+            {t.import}
           </Button>
           <Button onClick={handleExport} variant="outline" className="flex gap-1 items-center">
             <FileDown size={16} />
-            Export
+            {t.export}
           </Button>
           <Button onClick={handleReset} variant="outline" className="flex gap-1 items-center">
             <RotateCcw size={16} />
-            Reset
+            {t.reset}
           </Button>
         </div>
       </div>

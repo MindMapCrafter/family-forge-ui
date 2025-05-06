@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,20 +7,7 @@ import { Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toggle } from '@/components/ui/toggle';
-
-// Dictionary for multi-language support
-const translations = {
-  en: {
-    name: "Name",
-    gender: "Gender",
-    relation: "Relation",
-    hideChildren: "Hide Children",
-    showChildren: "Show Children",
-    edit: "Edit",
-    delete: "Delete"
-  }
-  // Other languages can be added here later
-};
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FamilyMemberData {
   name: string;
@@ -42,11 +30,9 @@ interface FamilyMemberNodeProps {
 }
 
 const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodeProps) => {
-  // State for language and children visibility
-  const [language, setLanguage] = useState<'en'>('en'); // Default to English
-  const [childrenCollapsed, setChildrenCollapsed] = useState(false);
-  
-  const t = translations[language]; // Get translations for current language
+  // Use language context for translations
+  const { t } = useLanguage();
+  const [childrenCollapsed, setChildrenCollapsed] = React.useState(false);
 
   // Determine border color based on gender
   const getBorderColor = () => {
@@ -74,7 +60,12 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
   // Format gender to display properly
   const formatGender = () => {
     if (!data.gender) return null;
-    return data.gender.charAt(0).toUpperCase() + data.gender.slice(1);
+    
+    switch (data.gender) {
+      case 'male': return t.male;
+      case 'female': return t.female;
+      default: return t.other;
+    }
   };
 
   // Handle toggle children visibility
@@ -142,7 +133,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               
               {(data.relationContext || data.relationship) && (
                 <div>
-                  <div className="text-xs text-muted-foreground">{t.relation}:</div>
+                  <div className="text-xs text-muted-foreground">{t.relationship}:</div>
                   <div className="text-sm text-muted-foreground">
                     {data.relationContext || data.relationship}
                   </div>
