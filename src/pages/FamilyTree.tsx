@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
@@ -177,32 +176,68 @@ const FamilyTree = () => {
     return relatedMembers;
   };
 
-  // Generate contextual relation description
+  // Generate contextual relation description with improved formatting
   const generateRelationContext = (nodeId: string, relationship: string) => {
     if (relationship.toLowerCase() === 'root') return 'Root Member';
     
     const relatedMembers = findRelatedMembers(nodeId);
     const relationship_lc = relationship.toLowerCase();
     
+    // Handle child relationship
     if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
       if (relatedMembers.parents.length > 0) {
         const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
         return `${relationship} of ${parentNames}`;
       }
-    } else if (relationship_lc === 'parent' || relationship_lc === 'father' || relationship_lc === 'mother') {
+    } 
+    // Handle parent relationship
+    else if (relationship_lc === 'parent' || relationship_lc === 'father' || relationship_lc === 'mother') {
       if (relatedMembers.children.length > 0) {
-        const childNames = relatedMembers.children.map(c => c.name).join(', ');
-        return `${relationship} of ${childNames}`;
+        const childNames = relatedMembers.children.map(c => c.name);
+        if (childNames.length === 1) {
+          return `${relationship} of ${childNames[0]}`;
+        } else if (childNames.length > 1) {
+          const lastChild = childNames.pop();
+          return `${relationship} of ${childNames.join(', ')} & ${lastChild}`;
+        }
       }
-    } else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
+    } 
+    // Handle spouse relationship 
+    else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
       if (relatedMembers.spouses.length > 0) {
         const spouseNames = relatedMembers.spouses.map(s => s.name).join(' & ');
         return `${relationship} of ${spouseNames}`;
       }
-    } else if (relationship_lc === 'sibling' || relationship_lc === 'brother' || relationship_lc === 'sister') {
+    } 
+    // Handle sibling relationship
+    else if (relationship_lc === 'sibling' || relationship_lc === 'brother' || relationship_lc === 'sister') {
       if (relatedMembers.siblings.length > 0) {
-        const siblingNames = relatedMembers.siblings.map(s => s.name).join(', ');
-        return `${relationship} of ${siblingNames}`;
+        const siblingNames = relatedMembers.siblings.map(s => s.name);
+        if (siblingNames.length === 1) {
+          return `${relationship} of ${siblingNames[0]}`;
+        } else if (siblingNames.length > 1) {
+          const lastSibling = siblingNames.pop();
+          return `${relationship} of ${siblingNames.join(', ')} & ${lastSibling}`;
+        }
+      }
+    }
+    // Handle grandparent relationships
+    else if (relationship_lc === 'grandfather' || relationship_lc === 'grandmother') {
+      if (relatedMembers.children.length > 0) {
+        const grandchildNames = relatedMembers.children.map(c => c.name);
+        if (grandchildNames.length === 1) {
+          return `${relationship} of ${grandchildNames[0]}`;
+        } else if (grandchildNames.length > 1) {
+          const lastGrandchild = grandchildNames.pop();
+          return `${relationship} of ${grandchildNames.join(', ')} & ${lastGrandchild}`;
+        }
+      }
+    }
+    // Handle grandchild relationships
+    else if (relationship_lc === 'grandchild' || relationship_lc === 'grandson' || relationship_lc === 'granddaughter') {
+      if (relatedMembers.parents.length > 0) {
+        const grandparentNames = relatedMembers.parents.map(p => p.name).join(' & ');
+        return `${relationship} of ${grandparentNames}`;
       }
     }
     

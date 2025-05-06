@@ -16,7 +16,7 @@ interface FamilyMemberData {
   onDelete?: (id: string) => void;
   id: string;
   title?: string;
-  relationContext?: string; // New property to store contextual relationship information
+  relationContext?: string; // Property to store contextual relationship information
 }
 
 interface FamilyMemberNodeProps {
@@ -95,23 +95,23 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
           </div>
           
           <ScrollArea className="w-full max-h-[120px] px-1">
-            <div className="text-sm mb-1">
-              <span className="font-semibold">Name:</span> {data.name}
+            <div className="text-sm mb-1 font-medium">
+              {data.name}
             </div>
             
             {formatGender() && (
-              <div className="text-sm mb-1">
-                <span className="font-semibold">Gender:</span> {formatGender()}
+              <div className="text-sm mb-1 text-muted-foreground">
+                {formatGender()}
               </div>
             )}
             
             {data.relationContext ? (
-              <div className="text-sm mb-1">
-                <span className="font-semibold">Relation:</span> {data.relationContext}
+              <div className="text-sm mt-2 text-center border-t pt-1 text-muted-foreground">
+                {data.relationContext}
               </div>
             ) : data.relationship && (
-              <div className="text-sm mb-1">
-                <span className="font-semibold">Relation:</span> {data.relationship}
+              <div className="text-sm mt-2 text-center border-t pt-1 text-muted-foreground">
+                {data.relationship}
               </div>
             )}
             
