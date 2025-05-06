@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Upload, Image, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Enhanced form schema with all relevant fields
 const formSchema = z.object({
@@ -60,6 +61,7 @@ const EditMemberModal = ({
 }: EditMemberModalProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(initialValues.image || null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const form = useForm<EditMemberFormValues>({
     resolver: zodResolver(formSchema),
@@ -82,14 +84,14 @@ const EditMemberModal = ({
     
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      setImageUploadError("Image size must be less than 2MB");
+      setImageUploadError(t.imageSizeLimit);
       return;
     }
     
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      setImageUploadError("Only JPG, PNG and WEBP formats are supported");
+      setImageUploadError(t.validFileTypes);
       return;
     }
     
@@ -118,7 +120,7 @@ const EditMemberModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Family Member</DialogTitle>
+          <DialogTitle>{t.editFamilyMember}</DialogTitle>
         </DialogHeader>
         
         {error && (
@@ -136,9 +138,9 @@ const EditMemberModal = ({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>{t.name}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter name" {...field} />
+                      <Input placeholder={t.enterName} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -150,20 +152,20 @@ const EditMemberModal = ({
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Gender</FormLabel>
+                    <FormLabel>{t.gender}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
+                          <SelectValue placeholder={t.selectGender} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="male">{t.male}</SelectItem>
+                        <SelectItem value="female">{t.female}</SelectItem>
+                        <SelectItem value="other">{t.other}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -176,9 +178,9 @@ const EditMemberModal = ({
                 name="relationship"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Relationship (Read-only)</FormLabel>
+                    <FormLabel>{t.relationship_readonly}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Relationship" {...field} readOnly className="bg-muted" />
+                      <Input placeholder={t.relationship} {...field} readOnly className="bg-muted" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,7 +188,7 @@ const EditMemberModal = ({
               />
 
               <FormItem>
-                <FormLabel>Profile Picture</FormLabel>
+                <FormLabel>{t.profilePicture}</FormLabel>
                 <div className="flex flex-col items-center space-y-3">
                   {imagePreview ? (
                     <div className="flex flex-col items-center">
@@ -203,7 +205,7 @@ const EditMemberModal = ({
                         onClick={removeImage}
                         type="button"
                       >
-                        <X size={14} className="mr-1" /> Remove Photo
+                        <X size={14} className="mr-1" /> {t.removePhoto}
                       </Button>
                     </div>
                   ) : (
@@ -213,7 +215,7 @@ const EditMemberModal = ({
                       </div>
                       <label htmlFor="image-upload" className="cursor-pointer">
                         <div className="mt-2 flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
-                          <Upload size={14} className="mr-1" /> Upload Photo
+                          <Upload size={14} className="mr-1" /> {t.uploadPhoto}
                         </div>
                         <input
                           id="image-upload"
@@ -229,7 +231,7 @@ const EditMemberModal = ({
                   {imagePreview && (
                     <label htmlFor="image-upload" className="cursor-pointer">
                       <div className="flex items-center justify-center rounded-md bg-secondary px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-secondary/90">
-                        <Upload size={14} className="mr-1" /> Change Photo
+                        <Upload size={14} className="mr-1" /> {t.changePhoto}
                       </div>
                       <input
                         id="image-upload"
@@ -245,7 +247,7 @@ const EditMemberModal = ({
                     <p className="text-red-500 text-sm">{imageUploadError}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Supported formats: JPG, PNG, WEBP (max 2MB)
+                    {t.supportedFormats}
                   </p>
                 </div>
               </FormItem>
@@ -255,9 +257,9 @@ const EditMemberModal = ({
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title (Optional)</FormLabel>
+                    <FormLabel>{t.title_optional}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter title (e.g. Prophet, Hazrat)" {...field} value={field.value || ''} />
+                      <Input placeholder={t.enterTitle} {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -265,7 +267,7 @@ const EditMemberModal = ({
               />
 
               <DialogFooter className="pt-4">
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit">{t.save}</Button>
               </DialogFooter>
             </form>
           </Form>

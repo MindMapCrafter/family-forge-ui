@@ -33,6 +33,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Upload, Camera } from 'lucide-react';
 import { Node } from 'reactflow';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -65,6 +66,7 @@ const AddMemberModal = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { t, formatMessage } = useLanguage();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -105,8 +107,8 @@ const AddMemberModal = ({
     // Check file size
     if (file.size > MAX_FILE_SIZE) {
       toast({
-        title: 'Image too large',
-        description: 'The image must be less than 2MB',
+        title: t.imageTooLarge,
+        description: t.imageSizeLimit,
         variant: 'destructive',
       });
       // Reset the file input
@@ -119,8 +121,8 @@ const AddMemberModal = ({
     // Check file type
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       toast({
-        title: 'Invalid file type',
-        description: 'Please upload JPG, PNG, or WEBP files only',
+        title: t.invalidFileType,
+        description: t.validFileTypes,
         variant: 'destructive',
       });
       // Reset the file input
@@ -155,11 +157,11 @@ const AddMemberModal = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Add Family Member</SheetTitle>
+          <SheetTitle>{t.addFamilyMember}</SheetTitle>
           <SheetDescription>
             {isFirstMember 
-              ? 'Add the first member to start your family tree.' 
-              : 'Add a new member and define their relationship.'}
+              ? t.addFirstMember
+              : t.addNewMember}
           </SheetDescription>
         </SheetHeader>
         
@@ -193,7 +195,7 @@ const AddMemberModal = ({
                 className="gap-2"
               >
                 <Upload size={16} />
-                {previewImage ? 'Change Photo' : 'Upload Photo'}
+                {previewImage ? t.changePhoto : t.uploadPhoto}
               </Button>
             </div>
             
@@ -202,9 +204,9 @@ const AddMemberModal = ({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t.name}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter name" {...field} />
+                    <Input placeholder={t.enterName} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -216,20 +218,20 @@ const AddMemberModal = ({
               name="gender"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gender</FormLabel>
+                  <FormLabel>{t.gender}</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
+                        <SelectValue placeholder={t.selectGender} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="male">{t.male}</SelectItem>
+                      <SelectItem value="female">{t.female}</SelectItem>
+                      <SelectItem value="other">{t.other}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -244,32 +246,32 @@ const AddMemberModal = ({
                   name="relationship"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Relationship</FormLabel>
+                      <FormLabel>{t.relationship}</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select relationship" />
+                            <SelectValue placeholder={t.selectRelationship} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {/* Basic relationships */}
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="child">Child</SelectItem>
-                          <SelectItem value="spouse">Spouse</SelectItem>
-                          <SelectItem value="sibling">Sibling</SelectItem>
+                          <SelectItem value="parent">{t.parent}</SelectItem>
+                          <SelectItem value="child">{t.child}</SelectItem>
+                          <SelectItem value="spouse">{t.spouse}</SelectItem>
+                          <SelectItem value="sibling">{t.sibling}</SelectItem>
                           
                           {/* Extended family relationships */}
-                          <SelectItem value="grandfather">Grandfather</SelectItem>
-                          <SelectItem value="grandmother">Grandmother</SelectItem>
-                          <SelectItem value="uncle">Uncle</SelectItem>
-                          <SelectItem value="aunt">Aunt</SelectItem>
-                          <SelectItem value="cousin">Cousin</SelectItem>
-                          <SelectItem value="nephew">Nephew</SelectItem>
-                          <SelectItem value="niece">Niece</SelectItem>
-                          <SelectItem value="grandchild">Grandchild</SelectItem>
+                          <SelectItem value="grandfather">{t.grandfather}</SelectItem>
+                          <SelectItem value="grandmother">{t.grandmother}</SelectItem>
+                          <SelectItem value="uncle">{t.uncle}</SelectItem>
+                          <SelectItem value="aunt">{t.aunt}</SelectItem>
+                          <SelectItem value="cousin">{t.cousin}</SelectItem>
+                          <SelectItem value="nephew">{t.nephew}</SelectItem>
+                          <SelectItem value="niece">{t.niece}</SelectItem>
+                          <SelectItem value="grandchild">{t.grandchild}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -282,14 +284,14 @@ const AddMemberModal = ({
                   name="relatedTo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Related to</FormLabel>
+                      <FormLabel>{t.relatedTo}</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
                         defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select existing member" />
+                            <SelectValue placeholder={t.selectExistingMember} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -309,9 +311,9 @@ const AddMemberModal = ({
             
             <SheetFooter className="pt-4">
               <SheetClose asChild>
-                <Button variant="outline" type="button">Cancel</Button>
+                <Button variant="outline" type="button">{t.cancel}</Button>
               </SheetClose>
-              <Button type="submit">Add Member</Button>
+              <Button type="submit">{t.add}</Button>
             </SheetFooter>
           </form>
         </Form>

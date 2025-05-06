@@ -98,7 +98,7 @@ const FamilyTree = () => {
   const [hiddenChildren, setHiddenChildren] = useState<{[nodeId: string]: boolean}>({});
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, formatMessage } = useLanguage();
   
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1', strokeWidth: 2 } }, eds));
@@ -168,6 +168,11 @@ const FamilyTree = () => {
     return grandparentIds;
   }, [getParentNodesIds]);
 
+  // Get a node by ID
+  const getNodeById = useCallback((id: string) => {
+    return nodes.find(node => node.id === id);
+  }, [nodes]);
+
   // Find related members for a given node ID with expanded hierarchy
   const findRelatedMembers = useCallback((nodeId: string) => {
     const relatedMembers = {
@@ -182,7 +187,7 @@ const FamilyTree = () => {
     // Get direct parents
     const parentIds = getParentNodesIds(nodeId);
     parentIds.forEach(parentId => {
-      const parentNode = nodes.find(node => node.id === parentId);
+      const parentNode = getNodeById(parentId);
       if (parentNode) {
         relatedMembers.parents.push({ id: parentNode.id, name: parentNode.data.name });
       }
@@ -191,7 +196,7 @@ const FamilyTree = () => {
     // Get direct children
     const childIds = getChildNodesIds(nodeId);
     childIds.forEach(childId => {
-      const childNode = nodes.find(node => node.id === childId);
+      const childNode = getNodeById(childId);
       if (childNode) {
         relatedMembers.children.push({ id: childNode.id, name: childNode.data.name });
       }
@@ -200,7 +205,7 @@ const FamilyTree = () => {
     // Get grandparents
     const grandparentIds = getGrandparentNodesIds(nodeId);
     grandparentIds.forEach(grandparentId => {
-      const grandparentNode = nodes.find(node => node.id === grandparentId);
+      const grandparentNode = getNodeById(grandparentId);
       if (grandparentNode) {
         relatedMembers.grandparents.push({ id: grandparentNode.id, name: grandparentNode.data.name });
       }
@@ -210,7 +215,7 @@ const FamilyTree = () => {
     childIds.forEach(childId => {
       const grandchildIds = getChildNodesIds(childId);
       grandchildIds.forEach(grandchildId => {
-        const grandchildNode = nodes.find(node => node.id === grandchildId);
+        const grandchildNode = getNodeById(grandchildId);
         if (grandchildNode) {
           relatedMembers.grandchildren.push({ id: grandchildNode.id, name: grandchildNode.data.name });
         }
@@ -219,11 +224,11 @@ const FamilyTree = () => {
     
     // Get spouses and siblings
     edges.forEach(edge => {
-      const currentNode = nodes.find(node => node.id === nodeId);
+      const currentNode = getNodeById(nodeId);
       if (!currentNode) return;
       
       if (edge.target === nodeId) { // The other node points to this node
-        const sourceNode = nodes.find(node => node.id === edge.source);
+        const sourceNode = getNodeById(edge.source);
         if (sourceNode && sourceNode.data.relationship) {
           const relation = sourceNode.data.relationship.toLowerCase();
           
@@ -236,7 +241,7 @@ const FamilyTree = () => {
       }
       
       if (edge.source === nodeId) { // This node points to another node
-        const targetNode = nodes.find(node => node.id === edge.target);
+        const targetNode = getNodeById(edge.target);
         if (targetNode && targetNode.data.relationship) {
           const relation = targetNode.data.relationship.toLowerCase();
           
@@ -250,7 +255,7 @@ const FamilyTree = () => {
     });
     
     return relatedMembers;
-  }, [nodes, edges, getParentNodesIds, getChildNodesIds, getGrandparentNodesIds]);
+  }, [nodes, edges, getParentNodesIds, getChildNodesIds, getGrandparentNodesIds, getNodeById]);
 
   // Generate contextual relation description with improved formatting and hierarchy
   const generateRelationContext = useCallback((nodeId: string, relationship: string) => {
@@ -264,13 +269,13 @@ const FamilyTree = () => {
     if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
       if (relatedMembers.parents.length > 0) {
         const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        relationContexts.push(`Child of ${parentNames}`);
+        relationContexts.push(`${t.child} of ${parentNames}`);
       }
       
       // Add grandparent relation
       if (relatedMembers.grandparents.length > 0) {
         const grandparentNames = relatedMembers.grandparents.map(p => p.name).join(' & ');
-        relationContexts.push(`Grandchild of ${grandparentNames}`);
+        relationContexts.push(`${t.grandchild} of ${grandparentNames}`);
       }
     } 
     // Handle parent relationship with children
@@ -278,10 +283,10 @@ const FamilyTree = () => {
       if (relatedMembers.children.length > 0) {
         const childNames = relatedMembers.children.map(c => c.name);
         if (childNames.length === 1) {
-          relationContexts.push(`Parent of ${childNames[0]}`);
+          relationContexts.push(`${t.parent} of ${childNames[0]}`);
         } else if (childNames.length > 1) {
           const lastChild = childNames.pop();
-          relationContexts.push(`Parent of ${childNames.join(', ')} & ${lastChild}`);
+          relationContexts.push(`${t.parent} of ${childNames.join(', ')} & ${lastChild}`);
         }
       }
       
@@ -289,10 +294,10 @@ const FamilyTree = () => {
       if (relatedMembers.grandchildren.length > 0) {
         const grandchildNames = relatedMembers.grandchildren.map(c => c.name);
         if (grandchildNames.length === 1) {
-          relationContexts.push(`Grandparent of ${grandchildNames[0]}`);
+          relationContexts.push(`${t.grandfather}/${t.grandmother} of ${grandchildNames[0]}`);
         } else if (grandchildNames.length > 1) {
           const lastGrandchild = grandchildNames.pop();
-          relationContexts.push(`Grandparent of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
+          relationContexts.push(`${t.grandfather}/${t.grandmother} of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
         }
       }
     } 
@@ -300,7 +305,7 @@ const FamilyTree = () => {
     else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
       if (relatedMembers.spouses.length > 0) {
         const spouseNames = relatedMembers.spouses.map(s => s.name).join(' & ');
-        relationContexts.push(`Spouse of ${spouseNames}`);
+        relationContexts.push(`${t.spouse} of ${spouseNames}`);
       }
     } 
     // Handle sibling relationship
@@ -308,10 +313,10 @@ const FamilyTree = () => {
       if (relatedMembers.siblings.length > 0) {
         const siblingNames = relatedMembers.siblings.map(s => s.name);
         if (siblingNames.length === 1) {
-          relationContexts.push(`Sibling of ${siblingNames[0]}`);
+          relationContexts.push(`${t.sibling} of ${siblingNames[0]}`);
         } else if (siblingNames.length > 1) {
           const lastSibling = siblingNames.pop();
-          relationContexts.push(`Sibling of ${siblingNames.join(', ')} & ${lastSibling}`);
+          relationContexts.push(`${t.sibling} of ${siblingNames.join(', ')} & ${lastSibling}`);
         }
       }
     }
@@ -320,10 +325,10 @@ const FamilyTree = () => {
       if (relatedMembers.children.length > 0) {
         const grandchildNames = relatedMembers.children.map(c => c.name);
         if (grandchildNames.length === 1) {
-          relationContexts.push(`${relationship} of ${grandchildNames[0]}`);
+          relationContexts.push(`${relationship_lc === 'grandfather' ? t.grandfather : t.grandmother} of ${grandchildNames[0]}`);
         } else if (grandchildNames.length > 1) {
           const lastGrandchild = grandchildNames.pop();
-          relationContexts.push(`${relationship} of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
+          relationContexts.push(`${relationship_lc === 'grandfather' ? t.grandfather : t.grandmother} of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
         }
       }
     }
@@ -331,12 +336,35 @@ const FamilyTree = () => {
     else if (relationship_lc === 'grandchild' || relationship_lc === 'grandson' || relationship_lc === 'granddaughter') {
       if (relatedMembers.parents.length > 0) {
         const grandparentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        relationContexts.push(`${relationship} of ${grandparentNames}`);
+        relationContexts.push(`${t.grandchild} of ${grandparentNames}`);
+      }
+    }
+    // For other custom relationships, keep the original relationship 
+    else {
+      // For relationships like uncle, aunt, cousin, etc.
+      // Don't override with automatic parent/child relationships
+      // Just translate the relationship type
+      const relationKey = relationship_lc.trim();
+      const translatedRelation = t[relationKey as keyof typeof t] || relationship;
+      
+      // If we have any direct relations, append them to the custom relationship
+      if (relatedMembers.parents.length > 0) {
+        const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
+        relationContexts.push(`${translatedRelation}; ${t.child} of ${parentNames}`);
+      }
+      if (relatedMembers.grandparents.length > 0 && !relationContexts.length) {
+        const grandparentNames = relatedMembers.grandparents.map(p => p.name).join(' & ');
+        relationContexts.push(`${translatedRelation}; ${t.grandchild} of ${grandparentNames}`);
+      }
+      
+      // If no other relations found, use translated relationship
+      if (!relationContexts.length) {
+        relationContexts.push(translatedRelation);
       }
     }
     
     return relationContexts.join('; ') || relationship;
-  }, [findRelatedMembers]);
+  }, [findRelatedMembers, t]);
 
   // Handle hiding/showing children nodes
   const handleToggleChildren = useCallback((nodeId: string, isCollapsed: boolean) => {
@@ -370,10 +398,12 @@ const FamilyTree = () => {
     }, 100);
     
     toast({
-      title: isCollapsed ? 'Children hidden' : 'Children shown',
-      description: `${isCollapsed ? 'Hidden' : 'Showing'} children nodes for this family member.`
+      title: isCollapsed ? t.childrenHidden : t.childrenShown,
+      description: formatMessage('childrenToggleDesc', { 
+        state: isCollapsed ? t.hidden : t.showing 
+      })
     });
-  }, [getChildNodesIds, setNodes, reactFlowInstance, toast]);
+  }, [getChildNodesIds, setNodes, reactFlowInstance, toast, t, formatMessage]);
 
   // Update node relation contexts and hasChildren property
   const updateAllNodeProperties = useCallback(() => {
@@ -433,8 +463,8 @@ const FamilyTree = () => {
       
       setNodes([newNode]);
       toast({
-        title: 'Root member added',
-        description: `${name} has been added as the root of your family tree.`
+        title: t.rootMemberAdded,
+        description: formatMessage('rootMemberAddedDesc', { name })
       });
       setIsAddModalOpen(false);
       return;
@@ -444,8 +474,8 @@ const FamilyTree = () => {
     const relatedNode = nodes.find(node => node.id === relatedTo);
     if (!relatedNode && relationship !== 'root') {
       toast({
-        title: 'Error',
-        description: 'Could not find the related family member.',
+        title: t.error,
+        description: t.noMemberFound,
         variant: 'destructive'
       });
       return;
@@ -491,16 +521,16 @@ const FamilyTree = () => {
     }
     
     toast({
-      title: 'Member added',
-      description: `${name} has been added to your family tree.`
+      title: t.memberAdded,
+      description: formatMessage('memberAddedDesc', { name })
     });
     
     setIsAddModalOpen(false);
     
-    // Update relation contexts after a small delay to ensure nodes and edges are updated
+    // Update relation contexts immediately to ensure newly added node shows correct relationships
     setTimeout(() => {
       updateAllNodeProperties();
-    }, 100);
+    }, 50);
   };
 
   const handleEditMember = (id: string) => {
@@ -524,10 +554,10 @@ const FamilyTree = () => {
       setIsEditModalOpen(true);
     } else {
       console.log("Node not found for id:", id);
-      setEditError("Could not find the member to edit.");
+      setEditError(t.noMemberFound);
       toast({
-        title: 'Error',
-        description: 'Could not find the family member to edit.',
+        title: t.error,
+        description: t.noMemberFound,
         variant: 'destructive'
       });
       setIsEditModalOpen(true);
@@ -538,8 +568,8 @@ const FamilyTree = () => {
     if (!currentEditNode) {
       setEditError("No member selected for editing.");
       toast({
-        title: 'Error',
-        description: 'No member selected for editing.',
+        title: t.error,
+        description: t.noMemberFound,
         variant: 'destructive'
       });
       return;
@@ -571,8 +601,8 @@ const FamilyTree = () => {
       }));
       
       toast({
-        title: 'Member updated',
-        description: `${values.name} has been updated in your family tree.`
+        title: t.memberUpdated,
+        description: formatMessage('memberUpdatedDesc', { name: values.name })
       });
       
       setIsEditModalOpen(false);
@@ -582,31 +612,31 @@ const FamilyTree = () => {
       // Update relation contexts after editing
       setTimeout(() => {
         updateAllNodeProperties();
-      }, 100);
+      }, 50);
     } catch (error) {
       console.error("Error updating member:", error);
-      setEditError("Failed to update member. Please try again.");
+      setEditError(t.updateFailedDesc);
       toast({
-        title: 'Update failed',
-        description: 'Failed to update family member. Please try again.',
+        title: t.updateFailed,
+        description: t.updateFailedDesc,
         variant: 'destructive'
       });
     }
   };
 
   const handleDeleteMember = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this family member?')) {
+    if (window.confirm(t.deleteConfirm)) {
       setNodes(nodes.filter(node => node.data.id !== id));
       setEdges(edges.filter(edge => edge.source !== id && edge.target !== id));
       toast({
-        title: 'Member deleted',
-        description: 'Family member has been removed from the tree.'
+        title: t.memberDeleted,
+        description: t.memberDeletedDesc
       });
       
       // Update relation contexts after deletion
       setTimeout(() => {
         updateAllNodeProperties();
-      }, 100);
+      }, 50);
     }
   };
 
@@ -639,17 +669,17 @@ const FamilyTree = () => {
               // Update all node properties including hasChildren
               setTimeout(() => {
                 updateAllNodeProperties();
-              }, 100);
+              }, 50);
               
               toast({
-                title: 'Import successful',
-                description: 'Family tree has been imported.'
+                title: t.importSuccess,
+                description: t.familyTreeExported
               });
             }
           } catch (error) {
             toast({
-              title: 'Import failed',
-              description: 'The file format is not valid.',
+              title: t.importFailed,
+              description: t.invalidFileFormat,
               variant: 'destructive'
             });
           }
@@ -663,8 +693,8 @@ const FamilyTree = () => {
   const handleExport = () => {
     if (nodes.length === 0) {
       toast({
-        title: 'Nothing to export',
-        description: 'Your family tree is empty.',
+        title: t.nothingToExport,
+        description: t.emptyTree,
         variant: 'destructive'
       });
       return;
@@ -696,26 +726,26 @@ const FamilyTree = () => {
     URL.revokeObjectURL(url);
     
     toast({
-      title: 'Export successful',
-      description: 'Family tree has been exported as JSON.'
+      title: t.exportSuccess,
+      description: t.familyTreeExported
     });
   };
 
   const handleReset = () => {
     if (nodes.length > 0) {
-      if (window.confirm('Are you sure you want to reset the family tree?')) {
+      if (window.confirm(t.resetConfirm)) {
         setNodes([]);
         setEdges([]);
         setHiddenChildren({});
         toast({
-          title: 'Reset complete',
-          description: 'Your family tree has been reset.'
+          title: t.resetComplete,
+          description: t.familyTreeExported
         });
       }
     } else {
       toast({
-        title: 'Nothing to reset',
-        description: 'Your family tree is already empty.'
+        title: t.nothingToReset,
+        description: t.emptyTree
       });
     }
   };
@@ -724,7 +754,7 @@ const FamilyTree = () => {
     <div className="w-full h-screen flex flex-col">
       <div className="p-4 border-b">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Prophet Family Tree</h1>
+          <h1 className="text-2xl font-bold">{t.familyTreeTitle}</h1>
           <LanguageSelector />
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
@@ -771,13 +801,13 @@ const FamilyTree = () => {
         >
           <Controls showInteractive={true} />
           <Panel position="top-right" className="bg-white p-2 rounded-md shadow-md flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleZoomIn} title="Zoom In">
+            <Button variant="outline" size="sm" onClick={handleZoomIn} title={t.zoomIn}>
               <ZoomIn size={16} />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleZoomOut} title="Zoom Out">
+            <Button variant="outline" size="sm" onClick={handleZoomOut} title={t.zoomOut}>
               <ZoomOut size={16} />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleFitView} title="Fit View">
+            <Button variant="outline" size="sm" onClick={handleFitView} title={t.fitView}>
               <MoveHorizontal size={16} />
             </Button>
           </Panel>

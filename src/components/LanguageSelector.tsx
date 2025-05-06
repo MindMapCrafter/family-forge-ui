@@ -13,10 +13,11 @@ import { useLanguage, LanguageCode } from '@/contexts/LanguageContext';
 const languageOptions: {
   code: LanguageCode;
   name: string;
+  nativeName: string;
 }[] = [
-  { code: 'en', name: 'English' },
-  { code: 'ur', name: 'اردو (Urdu)' },
-  { code: 'pa', name: 'ਪੰਜਾਬੀ (Punjabi)' },
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'ur', name: 'Urdu', nativeName: 'اردو' },
+  { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ' },
 ];
 
 const LanguageSelector = () => {
@@ -37,7 +38,7 @@ const LanguageSelector = () => {
             onClick={() => setLanguage(option.code)}
             className={language === option.code ? 'bg-accent text-accent-foreground' : ''}
           >
-            {option.name}
+            {option.nativeName} ({option.name})
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
