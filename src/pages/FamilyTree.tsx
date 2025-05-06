@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import ReactFlow, { 
   MiniMap, 
   Controls, 
@@ -15,12 +15,11 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
-import { Plus, FileDown, FileUp, RotateCcw, ZoomIn, ZoomOut, MoveHorizontal, MoveVertical } from 'lucide-react';
+import { Plus, FileDown, FileUp, RotateCcw, ZoomIn, ZoomOut, MoveHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import FamilyMemberNode from '@/components/FamilyMemberNode';
 import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal, { EditMemberFormValues } from '@/components/EditMemberModal';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
@@ -94,6 +93,7 @@ const FamilyTree = () => {
     relationship?: string;
   } | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [hiddenChildren, setHiddenChildren] = useState<{[nodeId: string]: boolean}>({});
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -128,8 +128,20 @@ const FamilyTree = () => {
     setReactFlowInstance(instance);
   }, []);
 
+  // Get children nodes for a parent node
+  const getChildNodesIds = useCallback((parentId: string) => {
+    const childIds: string[] = [];
+    edges.forEach(edge => {
+      // Child edges are when the parent is the source
+      if (edge.source === parentId) {
+        childIds.push(edge.target);
+      }
+    });
+    return childIds;
+  }, [edges]);
+
   // Find related members for a given node ID
-  const findRelatedMembers = (nodeId: string) => {
+  const findRelatedMembers = useCallback((nodeId: string) => {
     const relatedMembers = {
       parents: [] as {id: string, name: string}[],
       children: [] as {id: string, name: string}[],
@@ -174,10 +186,10 @@ const FamilyTree = () => {
     });
     
     return relatedMembers;
-  };
+  }, [nodes, edges]);
 
   // Generate contextual relation description with improved formatting
-  const generateRelationContext = (nodeId: string, relationship: string) => {
+  const generateRelationContext = useCallback((nodeId: string, relationship: string) => {
     if (relationship.toLowerCase() === 'root') return 'Root Member';
     
     const relatedMembers = findRelatedMembers(nodeId);
@@ -187,7 +199,7 @@ const FamilyTree = () => {
     if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
       if (relatedMembers.parents.length > 0) {
         const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        return `${relationship} of ${parentNames}`;
+        return `Child of ${parentNames}`;
       }
     } 
     // Handle parent relationship
@@ -195,10 +207,10 @@ const FamilyTree = () => {
       if (relatedMembers.children.length > 0) {
         const childNames = relatedMembers.children.map(c => c.name);
         if (childNames.length === 1) {
-          return `${relationship} of ${childNames[0]}`;
+          return `Parent of ${childNames[0]}`;
         } else if (childNames.length > 1) {
           const lastChild = childNames.pop();
-          return `${relationship} of ${childNames.join(', ')} & ${lastChild}`;
+          return `Parent of ${childNames.join(', ')} & ${lastChild}`;
         }
       }
     } 
@@ -206,7 +218,7 @@ const FamilyTree = () => {
     else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
       if (relatedMembers.spouses.length > 0) {
         const spouseNames = relatedMembers.spouses.map(s => s.name).join(' & ');
-        return `${relationship} of ${spouseNames}`;
+        return `Spouse of ${spouseNames}`;
       }
     } 
     // Handle sibling relationship
@@ -214,10 +226,10 @@ const FamilyTree = () => {
       if (relatedMembers.siblings.length > 0) {
         const siblingNames = relatedMembers.siblings.map(s => s.name);
         if (siblingNames.length === 1) {
-          return `${relationship} of ${siblingNames[0]}`;
+          return `Sibling of ${siblingNames[0]}`;
         } else if (siblingNames.length > 1) {
           const lastSibling = siblingNames.pop();
-          return `${relationship} of ${siblingNames.join(', ')} & ${lastSibling}`;
+          return `Sibling of ${siblingNames.join(', ')} & ${lastSibling}`;
         }
       }
     }
@@ -242,25 +254,67 @@ const FamilyTree = () => {
     }
     
     return relationship;
-  };
+  }, [findRelatedMembers]);
 
-  // Update node relation contexts
-  const updateAllNodeRelationContexts = () => {
-    setNodes(currentNodes => currentNodes.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        relationContext: generateRelationContext(node.id, node.data.relationship)
+  // Handle hiding/showing children nodes
+  const handleToggleChildren = useCallback((nodeId: string, isCollapsed: boolean) => {
+    // Update hidden children state
+    setHiddenChildren(prev => ({
+      ...prev,
+      [nodeId]: isCollapsed
+    }));
+    
+    // Get all child node IDs for this parent
+    const childIds = getChildNodesIds(nodeId);
+    
+    // Update node visibility
+    setNodes(currentNodes => 
+      currentNodes.map(node => {
+        if (childIds.includes(node.id)) {
+          return {
+            ...node,
+            hidden: isCollapsed
+          };
+        }
+        return node;
+      })
+    );
+    
+    // After a brief delay to allow state updates, fit view to adjust
+    setTimeout(() => {
+      if (reactFlowInstance) {
+        reactFlowInstance.fitView({ padding: 0.2 });
       }
-    })));
-  };
+    }, 100);
+    
+    toast({
+      title: isCollapsed ? 'Children hidden' : 'Children shown',
+      description: `${isCollapsed ? 'Hidden' : 'Showing'} children nodes for this family member.`
+    });
+  }, [getChildNodesIds, setNodes, reactFlowInstance, toast]);
+
+  // Update node relation contexts and hasChildren property
+  const updateAllNodeProperties = useCallback(() => {
+    setNodes(currentNodes => currentNodes.map(node => {
+      const childIds = getChildNodesIds(node.id);
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          relationContext: generateRelationContext(node.id, node.data.relationship),
+          hasChildren: childIds.length > 0,
+          onToggleChildren: handleToggleChildren
+        }
+      };
+    }));
+  }, [setNodes, generateRelationContext, getChildNodesIds, handleToggleChildren]);
 
   // Update contexts whenever nodes or edges change
   React.useEffect(() => {
     if (nodes.length > 0) {
-      updateAllNodeRelationContexts();
+      updateAllNodeProperties();
     }
-  }, [nodes.length, edges.length]);
+  }, [nodes.length, edges.length, updateAllNodeProperties]);
 
   const handleAddMember = () => {
     setIsAddModalOpen(true);
@@ -287,6 +341,8 @@ const FamilyTree = () => {
           id: newId,
           onEdit: (id: string) => handleEditMember(id),
           onDelete: (id: string) => handleDeleteMember(id),
+          onToggleChildren: handleToggleChildren,
+          hasChildren: false
         },
         position: { x: 0, y: 0 }
       };
@@ -327,6 +383,8 @@ const FamilyTree = () => {
         id: newId,
         onEdit: (id: string) => handleEditMember(id),
         onDelete: (id: string) => handleDeleteMember(id),
+        onToggleChildren: handleToggleChildren,
+        hasChildren: false
       },
       position
     };
@@ -357,7 +415,7 @@ const FamilyTree = () => {
     
     // Update relation contexts after a small delay to ensure nodes and edges are updated
     setTimeout(() => {
-      updateAllNodeRelationContexts();
+      updateAllNodeProperties();
     }, 100);
   };
 
@@ -420,6 +478,8 @@ const FamilyTree = () => {
               id: node.data.id,
               onEdit: node.data.onEdit,
               onDelete: node.data.onDelete,
+              onToggleChildren: handleToggleChildren,
+              hasChildren: node.data.hasChildren
             }
           };
         }
@@ -437,7 +497,7 @@ const FamilyTree = () => {
       
       // Update relation contexts after editing
       setTimeout(() => {
-        updateAllNodeRelationContexts();
+        updateAllNodeProperties();
       }, 100);
     } catch (error) {
       console.error("Error updating member:", error);
@@ -461,7 +521,7 @@ const FamilyTree = () => {
       
       // Update relation contexts after deletion
       setTimeout(() => {
-        updateAllNodeRelationContexts();
+        updateAllNodeProperties();
       }, 100);
     }
   };
@@ -485,11 +545,18 @@ const FamilyTree = () => {
                   id: node.id,
                   onEdit: (id: string) => handleEditMember(id),
                   onDelete: (id: string) => handleDeleteMember(id),
+                  onToggleChildren: handleToggleChildren,
                 }
               }));
               
               setNodes(processedNodes);
               setEdges(importedData.edges);
+              
+              // Update all node properties including hasChildren
+              setTimeout(() => {
+                updateAllNodeProperties();
+              }, 100);
+              
               toast({
                 title: 'Import successful',
                 description: 'Family tree has been imported.'
@@ -555,6 +622,7 @@ const FamilyTree = () => {
       if (window.confirm('Are you sure you want to reset the family tree?')) {
         setNodes([]);
         setEdges([]);
+        setHiddenChildren({});
         toast({
           title: 'Reset complete',
           description: 'Your family tree has been reset.'

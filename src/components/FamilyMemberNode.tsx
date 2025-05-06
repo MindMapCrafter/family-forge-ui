@@ -1,11 +1,25 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Toggle } from '@/components/ui/toggle';
+
+// Dictionary for multi-language support
+const translations = {
+  en: {
+    name: "Name",
+    gender: "Gender",
+    relation: "Relation",
+    hideChildren: "Hide Children",
+    showChildren: "Show Children",
+    edit: "Edit",
+    delete: "Delete"
+  }
+  // Other languages can be added here later
+};
 
 interface FamilyMemberData {
   name: string;
@@ -17,6 +31,8 @@ interface FamilyMemberData {
   id: string;
   title?: string;
   relationContext?: string; // Property to store contextual relationship information
+  onToggleChildren?: (id: string, isCollapsed: boolean) => void;
+  hasChildren?: boolean;
 }
 
 interface FamilyMemberNodeProps {
@@ -26,6 +42,12 @@ interface FamilyMemberNodeProps {
 }
 
 const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodeProps) => {
+  // State for language and children visibility
+  const [language, setLanguage] = useState<'en'>('en'); // Default to English
+  const [childrenCollapsed, setChildrenCollapsed] = useState(false);
+  
+  const t = translations[language]; // Get translations for current language
+
   // Determine border color based on gender
   const getBorderColor = () => {
     switch (data.gender) {
@@ -55,6 +77,15 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
     return data.gender.charAt(0).toUpperCase() + data.gender.slice(1);
   };
 
+  // Handle toggle children visibility
+  const handleToggleChildren = () => {
+    const newCollapsedState = !childrenCollapsed;
+    setChildrenCollapsed(newCollapsedState);
+    if (data.onToggleChildren) {
+      data.onToggleChildren(data.id, newCollapsedState);
+    }
+  };
+
   // For debugging
   console.log('Node render:', { id, dataId: data.id, data });
 
@@ -74,7 +105,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               }}
             >
               <Edit size={14} />
-              <span className="sr-only">Edit</span>
+              <span className="sr-only">{t.edit}</span>
             </Button>
             <Avatar className="h-14 w-14">
               <AvatarImage src={data.image} alt={data.name} />
@@ -90,37 +121,61 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               }}
             >
               <Trash2 size={14} />
-              <span className="sr-only">Delete</span>
+              <span className="sr-only">{t.delete}</span>
             </Button>
           </div>
           
-          <ScrollArea className="w-full max-h-[120px] px-1">
-            <div className="text-sm mb-1 font-medium">
-              {data.name}
+          <ScrollArea className="w-full max-h-[140px] px-1">
+            {/* Information in strict order: Name, Gender, Relation */}
+            <div className="space-y-2">
+              <div>
+                <div className="text-xs text-muted-foreground">{t.name}:</div>
+                <div className="text-sm font-medium">{data.name}</div>
+              </div>
+              
+              {data.gender && (
+                <div>
+                  <div className="text-xs text-muted-foreground">{t.gender}:</div>
+                  <div className="text-sm">{formatGender()}</div>
+                </div>
+              )}
+              
+              {(data.relationContext || data.relationship) && (
+                <div>
+                  <div className="text-xs text-muted-foreground">{t.relation}:</div>
+                  <div className="text-sm text-muted-foreground">
+                    {data.relationContext || data.relationship}
+                  </div>
+                </div>
+              )}
+              
+              {data.title && (
+                <div className="text-sm font-semibold text-primary mt-1">
+                  {data.title}
+                </div>
+              )}
             </div>
-            
-            {formatGender() && (
-              <div className="text-sm mb-1 text-muted-foreground">
-                {formatGender()}
-              </div>
-            )}
-            
-            {data.relationContext ? (
-              <div className="text-sm mt-2 text-center border-t pt-1 text-muted-foreground">
-                {data.relationContext}
-              </div>
-            ) : data.relationship && (
-              <div className="text-sm mt-2 text-center border-t pt-1 text-muted-foreground">
-                {data.relationship}
-              </div>
-            )}
-            
-            {data.title && (
-              <div className="text-sm font-semibold text-primary mt-1">
-                {data.title}
-              </div>
-            )}
           </ScrollArea>
+          
+          {data.hasChildren && (
+            <Toggle 
+              className="mt-2 text-xs flex items-center" 
+              pressed={childrenCollapsed}
+              onPressedChange={handleToggleChildren}
+            >
+              {childrenCollapsed ? (
+                <>
+                  <ChevronDown size={14} className="mr-1" />
+                  {t.showChildren}
+                </>
+              ) : (
+                <>
+                  <ChevronUp size={14} className="mr-1" />
+                  {t.hideChildren}
+                </>
+              )}
+            </Toggle>
+          )}
         </div>
       </Card>
       <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} />
