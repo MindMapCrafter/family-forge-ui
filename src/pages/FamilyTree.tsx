@@ -50,33 +50,48 @@ const calculateNodePosition = (
   const baseX = relatedNode.position.x;
   const baseY = relatedNode.position.y;
 
-  switch (relationship) {
-    // Basic relationships
+  // Check relationship type to determine positioning logic
+  const relationshipLower = relationship.toLowerCase();
+  
+  // Non-hierarchical relationships (side by side)
+  const sideByRelations = ['cousin', 'uncle', 'aunt', 'sibling', 'brother', 'sister', 'spouse', 'husband', 'wife'];
+  if (sideByRelations.includes(relationshipLower)) {
+    return { x: baseX + horizontalSpacing, y: baseY };
+  }
+  
+  // Hierarchical relationships (above/below)
+  switch (relationshipLower) {
+    // Parent relationships (above)
     case 'parent':
+    case 'father':
+    case 'mother':
       return { x: baseX, y: baseY - verticalSpacing };
-    case 'child':
-      return { x: baseX, y: baseY + verticalSpacing };
-    case 'spouse':
-      return { x: baseX + horizontalSpacing, y: baseY };
-    case 'sibling':
-      return { x: baseX + horizontalSpacing, y: baseY };
     
-    // Extended family relationships
+    // Child relationships (below)
+    case 'child':
+    case 'son':
+    case 'daughter':
+      return { x: baseX, y: baseY + verticalSpacing };
+    
+    // Extended family - above
     case 'grandfather':
     case 'grandmother':
       return { x: baseX, y: baseY - (verticalSpacing * 2) };
-    case 'uncle':
-    case 'aunt':
-      return { x: baseX + horizontalSpacing, y: baseY - verticalSpacing };
-    case 'cousin':
-      return { x: baseX + horizontalSpacing, y: baseY };
+      
+    // Extended family - below
+    case 'grandchild':
+    case 'grandson':
+    case 'granddaughter':
+      return { x: baseX, y: baseY + (verticalSpacing * 2) };
+      
+    // Extended family - side positions with offset
     case 'nephew':
     case 'niece':
       return { x: baseX + horizontalSpacing, y: baseY + verticalSpacing };
-    case 'grandchild':
-      return { x: baseX, y: baseY + (verticalSpacing * 2) };
+      
+    // Default - place to the side to avoid overlaps
     default:
-      return { x: baseX, y: baseY };
+      return { x: baseX + horizontalSpacing, y: baseY };
   }
 };
 
@@ -135,13 +150,21 @@ const FamilyTree = () => {
   const getChildNodesIds = useCallback((parentId: string) => {
     const childIds: string[] = [];
     edges.forEach(edge => {
-      // Child edges are when the parent is the source
+      // Child edges are when the parent is the source and relationship is hierarchical
       if (edge.source === parentId) {
-        childIds.push(edge.target);
+        const targetNode = nodes.find(node => node.id === edge.target);
+        if (targetNode) {
+          const relationship = targetNode.data.relationship?.toLowerCase() || '';
+          // Only consider hierarchical relationships (parent->child)
+          if (relationship === 'child' || relationship === 'son' || relationship === 'daughter' || 
+              relationship === 'grandchild' || relationship === 'grandson' || relationship === 'granddaughter') {
+            childIds.push(edge.target);
+          }
+        }
       }
     });
     return childIds;
-  }, [edges]);
+  }, [edges, nodes]);
 
   // Get parent nodes for a child node
   const getParentNodesIds = useCallback((childId: string) => {
@@ -264,9 +287,32 @@ const FamilyTree = () => {
     const relatedMembers = findRelatedMembers(nodeId);
     const relationship_lc = relationship.toLowerCase();
     const relationContexts: string[] = [];
-    
+
+    // Handle side-by-side relations first (cousin, uncle, aunt)
+    const sideByRelations = ['cousin', 'uncle', 'aunt', 'sibling', 'brother', 'sister', 'nephew', 'niece', 'spouse', 'husband', 'wife'];
+    if (sideByRelations.includes(relationship_lc)) {
+      // Find who this member is related to
+      let relatedToMember = null;
+      edges.forEach(edge => {
+        if ((edge.source === nodeId || edge.target === nodeId) && edge.source !== edge.target) {
+          const otherId = edge.source === nodeId ? edge.target : edge.source;
+          const otherNode = getNodeById(otherId);
+          if (otherNode) {
+            relatedToMember = otherNode;
+          }
+        }
+      });
+
+      if (relatedToMember) {
+        const relationKey = relationship_lc.trim();
+        const translatedRelation = t[relationKey as keyof typeof t] || relationship;
+        relationContexts.push(`${translatedRelation} of ${relatedToMember.data.name}`);
+      } else {
+        relationContexts.push(relationship);
+      }
+    }
     // Handle child relationship with parents
-    if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
+    else if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
       if (relatedMembers.parents.length > 0) {
         const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
         relationContexts.push(`${t.child} of ${parentNames}`);
@@ -364,18 +410,23 @@ const FamilyTree = () => {
     }
     
     return relationContexts.join('; ') || relationship;
-  }, [findRelatedMembers, t]);
+  }, [findRelatedMembers, t, edges, getNodeById]);
 
   // Handle hiding/showing children nodes
   const handleToggleChildren = useCallback((nodeId: string, isCollapsed: boolean) => {
+    // First check if this node has children before allowing toggle
+    const childIds = getChildNodesIds(nodeId);
+    
+    // Only allow toggle if there are actual children
+    if (childIds.length === 0) {
+      return; // No children to hide/show
+    }
+    
     // Update hidden children state
     setHiddenChildren(prev => ({
       ...prev,
       [nodeId]: isCollapsed
     }));
-    
-    // Get all child node IDs for this parent
-    const childIds = getChildNodesIds(nodeId);
     
     // Update node visibility
     setNodes(currentNodes => 
@@ -408,13 +459,15 @@ const FamilyTree = () => {
   // Update node relation contexts and hasChildren property
   const updateAllNodeProperties = useCallback(() => {
     setNodes(currentNodes => currentNodes.map(node => {
+      // Only show hasChildren if actual parent-child relationships exist
       const childIds = getChildNodesIds(node.id);
+      
       return {
         ...node,
         data: {
           ...node.data,
           relationContext: generateRelationContext(node.id, node.data.relationship),
-          hasChildren: childIds.length > 0,
+          hasChildren: childIds.length > 0, // Only true for nodes with actual children
           onToggleChildren: handleToggleChildren
         }
       };
@@ -481,7 +534,7 @@ const FamilyTree = () => {
       return;
     }
     
-    // Calculate position based on relationship
+    // Calculate position based on relationship and node type
     const position = calculateNodePosition(relatedNode, relationship, nodes);
     
     // Create new node
@@ -506,10 +559,16 @@ const FamilyTree = () => {
     // Create edge between related node and new node
     let newEdge: Edge | null = null;
     if (relatedNode) {
+      // Check relationship type to determine edge direction
+      const relationshipLower = relationship.toLowerCase();
+      const isHierarchical = ['child', 'son', 'daughter', 'grandchild', 'grandson', 'granddaughter'].includes(relationshipLower);
+      
+      // For hierarchical relationships (parent->child), parent is source
+      // For non-hierarchical (side-by-side), we maintain a consistent direction
       newEdge = {
         id: `e-${relatedNode.id}-${newId}`,
-        source: relationship === 'child' ? relatedTo : newId,
-        target: relationship === 'child' ? newId : relatedTo,
+        source: isHierarchical ? relatedTo : newId,
+        target: isHierarchical ? newId : relatedTo,
         animated: true,
         style: { stroke: '#6366F1', strokeWidth: 2 }
       };
@@ -810,46 +869,3 @@ const FamilyTree = () => {
             <Button variant="outline" size="sm" onClick={handleFitView} title={t.fitView}>
               <MoveHorizontal size={16} />
             </Button>
-          </Panel>
-          <MiniMap 
-            nodeStrokeColor={(n) => {
-              return n.data.gender === 'male' ? '#93c5fd' : n.data.gender === 'female' ? '#fbcfe8' : '#d1d5db';
-            }}
-            nodeColor={(n) => {
-              return n.data.gender === 'male' ? '#dbeafe' : n.data.gender === 'female' ? '#fce7f3' : '#f3f4f6';
-            }}
-            maskColor="rgba(240, 240, 240, 0.6)"
-          />
-          <Background color="#aaa" gap={16} size={1} />
-        </ReactFlow>
-      </div>
-      
-      <AddMemberModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSubmit={handleAddMemberSubmit}
-        existingNodes={nodes}
-        isFirstMember={nodes.length === 0}
-      />
-      
-      <EditMemberModal
-        open={isEditModalOpen}
-        onOpenChange={(open) => {
-          setIsEditModalOpen(open);
-          if (!open) {
-            setEditError(undefined);
-          }
-        }}
-        onSubmit={handleEditMemberSubmit}
-        initialValues={currentEditNode || {
-          name: '',
-          gender: 'other',
-          relationship: ''
-        }}
-        error={editError}
-      />
-    </div>
-  );
-};
-
-export default FamilyTree;

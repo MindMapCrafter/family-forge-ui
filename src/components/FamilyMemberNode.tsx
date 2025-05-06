@@ -70,10 +70,13 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
 
   // Handle toggle children visibility
   const handleToggleChildren = () => {
-    const newCollapsedState = !childrenCollapsed;
-    setChildrenCollapsed(newCollapsedState);
-    if (data.onToggleChildren) {
-      data.onToggleChildren(data.id, newCollapsedState);
+    // Only allow toggling if this node actually has children
+    if (data.hasChildren) {
+      const newCollapsedState = !childrenCollapsed;
+      setChildrenCollapsed(newCollapsedState);
+      if (data.onToggleChildren) {
+        data.onToggleChildren(data.id, newCollapsedState);
+      }
     }
   };
 
@@ -148,7 +151,8 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
             </div>
           </ScrollArea>
           
-          {data.hasChildren && (
+          {/* Only show hide/show toggle for nodes with children */}
+          {data.hasChildren === true && (
             <Toggle 
               className="mt-2 text-xs flex items-center" 
               pressed={childrenCollapsed}
