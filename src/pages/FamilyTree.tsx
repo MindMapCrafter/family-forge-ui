@@ -398,6 +398,11 @@ const FamilyTree = () => {
     }
   }, [nodes.length, edges.length, updateAllNodeProperties]);
 
+  // Add the missing handleAddMember function
+  const handleAddMember = () => {
+    setIsAddModalOpen(true);
+  };
+
   // Handle adding a new member
   const handleAddMemberSubmit = (values: any) => {
     const { name, relationship, relatedTo, gender, image, title } = values;
