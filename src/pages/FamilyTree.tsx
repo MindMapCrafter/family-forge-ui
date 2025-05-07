@@ -42,7 +42,7 @@ const calculateNodePosition = (
     return { x: 0, y: 0 }; // Center for the first node
   }
 
-  // Increased spacing for better readability in large trees
+  // Increased spacing for better readability
   const horizontalSpacing = 300;
   const verticalSpacing = 200;
 
@@ -53,10 +53,21 @@ const calculateNodePosition = (
   // Check relationship type to determine positioning logic
   const relationshipLower = relationship.toLowerCase();
   
-  // Non-hierarchical relationships (side by side)
-  const sideByRelations = ['cousin', 'uncle', 'aunt', 'sibling', 'brother', 'sister', 'spouse', 'husband', 'wife'];
+  // Special positioning for sibling, cousin, spouse relationships (side by side)
+  const sideByRelations = ['cousin', 'uncle', 'aunt', 'sibling', 'brother', 'sister', 'spouse', 'husband', 'wife', 'nephew', 'niece'];
   if (sideByRelations.includes(relationshipLower)) {
-    return { x: baseX + horizontalSpacing, y: baseY };
+    // Find existing siblings to place new node properly
+    const existingSiblings = existingNodes.filter(node => 
+      node.data.relationship && 
+      sideByRelations.includes(node.data.relationship.toLowerCase()) &&
+      node.position.y === baseY
+    );
+    
+    // Place horizontally with progressive offset
+    return { 
+      x: baseX + horizontalSpacing + (existingSiblings.length * 50), 
+      y: baseY 
+    };
   }
   
   // Hierarchical relationships (above/below)
@@ -65,13 +76,31 @@ const calculateNodePosition = (
     case 'parent':
     case 'father':
     case 'mother':
-      return { x: baseX, y: baseY - verticalSpacing };
+      // Check for existing parents
+      const existingParents = existingNodes.filter(node => 
+        node.data.relationship && 
+        ['parent', 'father', 'mother'].includes(node.data.relationship.toLowerCase()) &&
+        node.position.y === baseY - verticalSpacing
+      );
+      return { 
+        x: baseX + (existingParents.length * horizontalSpacing/2), 
+        y: baseY - verticalSpacing 
+      };
     
     // Child relationships (below)
     case 'child':
     case 'son':
     case 'daughter':
-      return { x: baseX, y: baseY + verticalSpacing };
+      // Check for existing children
+      const existingChildren = existingNodes.filter(node => 
+        node.data.relationship && 
+        ['child', 'son', 'daughter'].includes(node.data.relationship.toLowerCase()) &&
+        node.position.y === baseY + verticalSpacing
+      );
+      return { 
+        x: baseX + (existingChildren.length * horizontalSpacing/2), 
+        y: baseY + verticalSpacing 
+      };
     
     // Extended family - above
     case 'grandfather':
@@ -83,11 +112,6 @@ const calculateNodePosition = (
     case 'grandson':
     case 'granddaughter':
       return { x: baseX, y: baseY + (verticalSpacing * 2) };
-      
-    // Extended family - side positions with offset
-    case 'nephew':
-    case 'niece':
-      return { x: baseX + horizontalSpacing, y: baseY + verticalSpacing };
       
     // Default - place to the side to avoid overlaps
     default:
@@ -282,134 +306,195 @@ const FamilyTree = () => {
 
   // Generate contextual relation description with improved formatting and hierarchy
   const generateRelationContext = useCallback((nodeId: string, relationship: string) => {
-    if (relationship.toLowerCase() === 'root') return 'Root Member';
+    if (relationship.toLowerCase() === 'root') {
+      // Set different root labels based on language
+      return t.language === 'en' ? 'Root Member' : 
+             t.language === 'ur' ? 'بنیادی رکن' : 
+             t.language === 'pa' ? 'ਮੁੱਢਲਾ ਮੈਂਬਰ' : 'Root Member';
+    }
     
     const relatedMembers = findRelatedMembers(nodeId);
     const relationship_lc = relationship.toLowerCase();
-    const relationContexts: string[] = [];
+    let primaryRelation = '';
 
-    // Handle side-by-side relations first (cousin, uncle, aunt)
-    const sideByRelations = ['cousin', 'uncle', 'aunt', 'sibling', 'brother', 'sister', 'nephew', 'niece', 'spouse', 'husband', 'wife'];
-    if (sideByRelations.includes(relationship_lc)) {
-      // Find who this member is related to
-      let relatedToMember = null;
-      edges.forEach(edge => {
-        if ((edge.source === nodeId || edge.target === nodeId) && edge.source !== edge.target) {
+    // Get relationship translation from the correct language context
+    const getRelationLabel = (relKey: string) => {
+      return t[relKey as keyof typeof t] || relationship;
+    };
+
+    // Format name list with the correct language conjunction
+    const formatNameList = (names: string[]) => {
+      if (names.length === 0) return '';
+      if (names.length === 1) return names[0];
+      
+      // Use language-specific conjunction
+      const conjunction = t.language === 'ur' ? ' اور ' : 
+                         t.language === 'pa' ? ' ਅਤੇ ' : ' & ';
+                         
+      const lastItem = names.pop();
+      return names.join(', ') + conjunction + lastItem;
+    };
+
+    // Handle side-by-side relations first (relatives at the same level)
+    if (['sibling', 'brother', 'sister', 'cousin', 'nephew', 'niece'].includes(relationship_lc)) {
+      // Find direct relation with a peer
+      const peers = edges.filter(edge => 
+        (edge.source === nodeId || edge.target === nodeId) && 
+        edge.source !== edge.target
+      );
+      
+      if (peers.length > 0) {
+        // Find the first direct peer relation
+        for (const edge of peers) {
           const otherId = edge.source === nodeId ? edge.target : edge.source;
           const otherNode = getNodeById(otherId);
+          
           if (otherNode) {
-            relatedToMember = otherNode;
+            const relationKey = relationship_lc;
+            const relationLabel = getRelationLabel(relationKey);
+            
+            // Use proper language format
+            if (t.language === 'ur') {
+              // Urdu: name + ka + relation
+              primaryRelation = `${otherNode.data.name} کا ${relationLabel}`;
+            } else if (t.language === 'pa') {
+              // Punjabi: name + da + relation
+              primaryRelation = `${otherNode.data.name} ਦਾ ${relationLabel}`;
+            } else {
+              // English: relation + of + name
+              primaryRelation = `${relationLabel} of ${otherNode.data.name}`;
+            }
+            
+            // We only need one primary relationship
+            break;
           }
         }
-      });
-
-      if (relatedToMember) {
-        const relationKey = relationship_lc.trim();
-        const translatedRelation = t[relationKey as keyof typeof t] || relationship;
-        relationContexts.push(`${translatedRelation} of ${relatedToMember.data.name}`);
-      } else {
-        relationContexts.push(relationship);
+      }
+    }
+    // Handle spouse relationship
+    else if (['spouse', 'husband', 'wife'].includes(relationship_lc)) {
+      if (relatedMembers.spouses.length > 0) {
+        const spouseNames = relatedMembers.spouses.map(s => s.name);
+        const spouseNameList = formatNameList(spouseNames);
+        const spouseLabel = getRelationLabel('spouse');
+        
+        // Format based on language
+        if (t.language === 'ur') {
+          primaryRelation = `${spouseNameList} کا ${spouseLabel}`;
+        } else if (t.language === 'pa') {
+          primaryRelation = `${spouseNameList} ਦਾ ${spouseLabel}`;
+        } else {
+          primaryRelation = `${spouseLabel} of ${spouseNameList}`;
+        }
       }
     }
     // Handle child relationship with parents
-    else if (relationship_lc === 'child' || relationship_lc === 'son' || relationship_lc === 'daughter') {
+    else if (['child', 'son', 'daughter'].includes(relationship_lc)) {
       if (relatedMembers.parents.length > 0) {
-        const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        relationContexts.push(`${t.child} of ${parentNames}`);
+        const parentNames = relatedMembers.parents.map(p => p.name);
+        const parentNameList = formatNameList(parentNames);
+        const childLabel = getRelationLabel('child');
+        
+        // Format based on language
+        if (t.language === 'ur') {
+          primaryRelation = `${parentNameList} کا ${childLabel}`;
+        } else if (t.language === 'pa') {
+          primaryRelation = `${parentNameList} ਦਾ ${childLabel}`;
+        } else {
+          primaryRelation = `${childLabel} of ${parentNameList}`;
+        }
       }
-      
-      // Add grandparent relation
-      if (relatedMembers.grandparents.length > 0) {
-        const grandparentNames = relatedMembers.grandparents.map(p => p.name).join(' & ');
-        relationContexts.push(`${t.grandchild} of ${grandparentNames}`);
-      }
-    } 
+    }
     // Handle parent relationship with children
-    else if (relationship_lc === 'parent' || relationship_lc === 'father' || relationship_lc === 'mother') {
+    else if (['parent', 'father', 'mother'].includes(relationship_lc)) {
       if (relatedMembers.children.length > 0) {
         const childNames = relatedMembers.children.map(c => c.name);
-        if (childNames.length === 1) {
-          relationContexts.push(`${t.parent} of ${childNames[0]}`);
-        } else if (childNames.length > 1) {
-          const lastChild = childNames.pop();
-          relationContexts.push(`${t.parent} of ${childNames.join(', ')} & ${lastChild}`);
-        }
-      }
-      
-      // Add grandchildren relation
-      if (relatedMembers.grandchildren.length > 0) {
-        const grandchildNames = relatedMembers.grandchildren.map(c => c.name);
-        if (grandchildNames.length === 1) {
-          relationContexts.push(`${t.grandfather}/${t.grandmother} of ${grandchildNames[0]}`);
-        } else if (grandchildNames.length > 1) {
-          const lastGrandchild = grandchildNames.pop();
-          relationContexts.push(`${t.grandfather}/${t.grandmother} of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
-        }
-      }
-    } 
-    // Handle spouse relationship 
-    else if (relationship_lc === 'spouse' || relationship_lc === 'husband' || relationship_lc === 'wife') {
-      if (relatedMembers.spouses.length > 0) {
-        const spouseNames = relatedMembers.spouses.map(s => s.name).join(' & ');
-        relationContexts.push(`${t.spouse} of ${spouseNames}`);
-      }
-    } 
-    // Handle sibling relationship
-    else if (relationship_lc === 'sibling' || relationship_lc === 'brother' || relationship_lc === 'sister') {
-      if (relatedMembers.siblings.length > 0) {
-        const siblingNames = relatedMembers.siblings.map(s => s.name);
-        if (siblingNames.length === 1) {
-          relationContexts.push(`${t.sibling} of ${siblingNames[0]}`);
-        } else if (siblingNames.length > 1) {
-          const lastSibling = siblingNames.pop();
-          relationContexts.push(`${t.sibling} of ${siblingNames.join(', ')} & ${lastSibling}`);
+        const childNameList = formatNameList(childNames);
+        const parentLabel = getRelationLabel('parent');
+        
+        // Format based on language
+        if (t.language === 'ur') {
+          primaryRelation = `${childNameList} کا ${parentLabel}`;
+        } else if (t.language === 'pa') {
+          primaryRelation = `${childNameList} ਦਾ ${parentLabel}`;
+        } else {
+          primaryRelation = `${parentLabel} of ${childNameList}`;
         }
       }
     }
     // Handle grandparent relationships
-    else if (relationship_lc === 'grandfather' || relationship_lc === 'grandmother') {
-      if (relatedMembers.children.length > 0) {
-        const grandchildNames = relatedMembers.children.map(c => c.name);
-        if (grandchildNames.length === 1) {
-          relationContexts.push(`${relationship_lc === 'grandfather' ? t.grandfather : t.grandmother} of ${grandchildNames[0]}`);
-        } else if (grandchildNames.length > 1) {
-          const lastGrandchild = grandchildNames.pop();
-          relationContexts.push(`${relationship_lc === 'grandfather' ? t.grandfather : t.grandmother} of ${grandchildNames.join(', ')} & ${lastGrandchild}`);
+    else if (['grandfather', 'grandmother'].includes(relationship_lc)) {
+      if (relatedMembers.grandchildren.length > 0) {
+        const grandchildNames = relatedMembers.grandchildren.map(c => c.name);
+        const grandchildNameList = formatNameList(grandchildNames);
+        const grandparentLabel = getRelationLabel(relationship_lc);
+        
+        // Format based on language
+        if (t.language === 'ur') {
+          primaryRelation = `${grandchildNameList} کا ${grandparentLabel}`;
+        } else if (t.language === 'pa') {
+          primaryRelation = `${grandchildNameList} ਦਾ ${grandparentLabel}`;
+        } else {
+          primaryRelation = `${grandparentLabel} of ${grandchildNameList}`;
         }
       }
     }
     // Handle grandchild relationships
-    else if (relationship_lc === 'grandchild' || relationship_lc === 'grandson' || relationship_lc === 'granddaughter') {
+    else if (['grandchild', 'grandson', 'granddaughter'].includes(relationship_lc)) {
       if (relatedMembers.parents.length > 0) {
-        const grandparentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        relationContexts.push(`${t.grandchild} of ${grandparentNames}`);
+        const grandparentNames = relatedMembers.parents.map(p => p.name);
+        const grandparentNameList = formatNameList(grandparentNames);
+        const grandchildLabel = getRelationLabel('grandchild');
+        
+        // Format based on language
+        if (t.language === 'ur') {
+          primaryRelation = `${grandparentNameList} کا ${grandchildLabel}`;
+        } else if (t.language === 'pa') {
+          primaryRelation = `${grandparentNameList} ਦਾ ${grandchildLabel}`;
+        } else {
+          primaryRelation = `${grandchildLabel} of ${grandparentNameList}`;
+        }
       }
     }
-    // For other custom relationships, keep the original relationship 
-    else {
-      // For relationships like uncle, aunt, cousin, etc.
-      // Don't override with automatic parent/child relationships
-      // Just translate the relationship type
-      const relationKey = relationship_lc.trim();
-      const translatedRelation = t[relationKey as keyof typeof t] || relationship;
+    // For uncle/aunt
+    else if (['uncle', 'aunt'].includes(relationship_lc)) {
+      // Find nieces/nephews
+      const nieces = edges.filter(edge => 
+        (edge.source === nodeId || edge.target === nodeId) && 
+        edge.source !== edge.target
+      );
       
-      // If we have any direct relations, append them to the custom relationship
-      if (relatedMembers.parents.length > 0) {
-        const parentNames = relatedMembers.parents.map(p => p.name).join(' & ');
-        relationContexts.push(`${translatedRelation}; ${t.child} of ${parentNames}`);
-      }
-      if (relatedMembers.grandparents.length > 0 && !relationContexts.length) {
-        const grandparentNames = relatedMembers.grandparents.map(p => p.name).join(' & ');
-        relationContexts.push(`${translatedRelation}; ${t.grandchild} of ${grandparentNames}`);
-      }
-      
-      // If no other relations found, use translated relationship
-      if (!relationContexts.length) {
-        relationContexts.push(translatedRelation);
+      if (nieces.length > 0) {
+        // Find the first direct relation
+        for (const edge of nieces) {
+          const otherId = edge.source === nodeId ? edge.target : edge.source;
+          const otherNode = getNodeById(otherId);
+          
+          if (otherNode) {
+            const relationKey = relationship_lc;
+            const relationLabel = getRelationLabel(relationKey);
+            
+            // Format based on language
+            if (t.language === 'ur') {
+              primaryRelation = `${otherNode.data.name} کا ${relationLabel}`;
+            } else if (t.language === 'pa') {
+              primaryRelation = `${otherNode.data.name} ਦਾ ${relationLabel}`;
+            } else {
+              primaryRelation = `${relationLabel} of ${otherNode.data.name}`;
+            }
+            break;
+          }
+        }
       }
     }
     
-    return relationContexts.join('; ') || relationship;
+    // If we don't have a specific formatting for this relationship or couldn't determine relations
+    if (!primaryRelation) {
+      const relationKey = relationship_lc.trim();
+      primaryRelation = getRelationLabel(relationKey);
+    }
+    
+    return primaryRelation;
   }, [findRelatedMembers, t, edges, getNodeById]);
 
   // Handle hiding/showing children nodes

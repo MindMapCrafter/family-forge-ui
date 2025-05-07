@@ -31,7 +31,7 @@ interface FamilyMemberNodeProps {
 
 const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodeProps) => {
   // Use language context for translations
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [childrenCollapsed, setChildrenCollapsed] = React.useState(false);
 
   // Determine border color based on gender
@@ -68,6 +68,25 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
     }
   };
 
+  // Format the relationship context to ensure it's properly displayed in the current language
+  const formatRelationContext = () => {
+    // If there's no relationContext, return the basic relationship
+    if (!data.relationContext) {
+      const relationKey = data.relationship?.toLowerCase().trim() || '';
+      return t[relationKey as keyof typeof t] || data.relationship;
+    }
+
+    // Special case for Root Member
+    if (data.relationContext === 'Root Member') {
+      return language === 'en' ? 'Root Member' : 
+             language === 'ur' ? 'بنیادی رکن' :
+             language === 'pa' ? 'ਮੁੱਢਲਾ ਮੈਂਬਰ' : data.relationContext;
+    }
+
+    // For other cases, use the relationContext directly as it's already generated with proper translations
+    return data.relationContext;
+  };
+
   // Handle toggle children visibility
   const handleToggleChildren = () => {
     // Only allow toggling if this node actually has children
@@ -80,12 +99,14 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
     }
   };
 
-  // For debugging
-  console.log('Node render:', { id, dataId: data.id, data });
-
   return (
     <div className="min-w-[200px] max-w-[250px]">
-      <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        isConnectable={isConnectable} 
+        className="!bg-gray-400 border-0"
+      />
       <Card className={`p-3 border-2 shadow-sm ${getBorderColor()} ${getBackgroundColor()}`}>
         <div className="flex flex-col items-center">
           <div className="flex justify-center gap-2 mb-2">
@@ -94,7 +115,6 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               size="sm" 
               className="h-8 w-8 p-0" 
               onClick={() => {
-                console.log('Edit button clicked with id:', data.id);
                 data.onEdit && data.onEdit(data.id);
               }}
             >
@@ -110,7 +130,6 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
               size="sm" 
               className="h-8 w-8 p-0" 
               onClick={() => {
-                console.log('Delete button clicked with id:', data.id);
                 data.onDelete && data.onDelete(data.id);
               }}
             >
@@ -138,7 +157,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
                 <div>
                   <div className="text-xs text-muted-foreground">{t.relationship}:</div>
                   <div className="text-sm text-muted-foreground">
-                    {data.relationContext || data.relationship}
+                    {formatRelationContext()}
                   </div>
                 </div>
               )}
@@ -151,12 +170,13 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
             </div>
           </ScrollArea>
           
-          {/* Only show hide/show toggle for nodes with children */}
+          {/* Only show hide/show toggle for nodes with actual children */}
           {data.hasChildren === true && (
             <Toggle 
               className="mt-2 text-xs flex items-center" 
               pressed={childrenCollapsed}
               onPressedChange={handleToggleChildren}
+              aria-label={childrenCollapsed ? t.showChildren : t.hideChildren}
             >
               {childrenCollapsed ? (
                 <>
@@ -173,7 +193,12 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
           )}
         </div>
       </Card>
-      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        isConnectable={isConnectable} 
+        className="!bg-gray-400 border-0"
+      />
     </div>
   );
 };
