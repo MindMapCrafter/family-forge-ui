@@ -315,7 +315,7 @@ export const createInitialFamilyTree = (onEdit: (id: string) => void, onDelete: 
     style: { stroke: '#6366F1', strokeWidth: 2 }
   });
   
-  // Add Danish and Zainab as spouses (they're married per requirement 4)
+  // Add Danish and Zainab as spouses (they're married per requirement)
   edges.push({
     id: 'e-danish-zainab',
     source: 'danish',
@@ -454,7 +454,7 @@ export const createInitialFamilyTree = (onEdit: (id: string) => void, onDelete: 
     style: { stroke: '#6366F1', strokeWidth: 2 }
   });
   
-  // Connect siblings Danish, Abdullah, Zainab
+  // Connect siblings with dashed lines
   edges.push({
     id: 'e-danish-abdullah',
     source: 'danish',
@@ -463,10 +463,8 @@ export const createInitialFamilyTree = (onEdit: (id: string) => void, onDelete: 
     style: { stroke: '#6366F1', strokeWidth: 2, strokeDasharray: '5,5' }
   });
   
-  // Mark cousins connections with dashed lines
-  // Mussa and Sara are cousins of Danish, Abdullah, Zainab and Hadi
-  // Ayan and Sana are cousins of Mussa, Sara, and Hadi
-  // Laiba is cousin to all the above
+  // Make sure to add cousin relationships by marking them as cousins in the data
+  // This doesn't add new edges but informs the relationship context generation
   
   return { nodes, edges };
 };
