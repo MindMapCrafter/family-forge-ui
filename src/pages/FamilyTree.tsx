@@ -869,3 +869,34 @@ const FamilyTree = () => {
             <Button variant="outline" size="sm" onClick={handleFitView} title={t.fitView}>
               <MoveHorizontal size={16} />
             </Button>
+          </Panel>
+          <MiniMap />
+          <Background />
+        </ReactFlow>
+      </div>
+      
+      {/* Add Member Modal */}
+      <AddMemberModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddMemberSubmit}
+        availableMembers={nodes.map(node => ({ id: node.id, name: node.data.name }))}
+      />
+      
+      {/* Edit Member Modal */}
+      <EditMemberModal 
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setCurrentEditNode(null);
+          setEditError(undefined);
+        }}
+        onSubmit={handleEditMemberSubmit}
+        currentValues={currentEditNode || { id: '', name: '' }}
+        error={editError}
+      />
+    </div>
+  );
+};
+
+export default FamilyTree;
