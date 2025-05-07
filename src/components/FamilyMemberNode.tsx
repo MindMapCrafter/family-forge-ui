@@ -21,6 +21,12 @@ interface FamilyMemberData {
   relationContext?: string; // Property to store contextual relationship information
   onToggleChildren?: (id: string, isCollapsed: boolean) => void;
   hasChildren?: boolean;
+  relations?: {
+    parent?: string[];
+    child?: string[];
+    spouse?: string[];
+    sibling?: string[];
+  };
 }
 
 interface FamilyMemberNodeProps {
