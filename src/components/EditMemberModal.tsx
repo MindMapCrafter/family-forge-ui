@@ -59,13 +59,15 @@ const EditMemberModal = ({
   initialValues,
   error,
 }: EditMemberModalProps) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(initialValues.image || null);
+  // Ensure initialValues is not undefined and has default values if needed
+  const safeInitialValues = initialValues || { name: '', gender: 'other' as const };
+  const [imagePreview, setImagePreview] = useState<string | null>(safeInitialValues.image || null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const { t } = useLanguage();
 
   const form = useForm<EditMemberFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialValues,
+    defaultValues: safeInitialValues,
   });
 
   const handleSubmit = (values: EditMemberFormValues) => {
@@ -195,7 +197,7 @@ const EditMemberModal = ({
                       <Avatar className="h-24 w-24">
                         <AvatarImage src={imagePreview} alt="Preview" />
                         <AvatarFallback>
-                          {initialValues.name?.charAt(0).toUpperCase() || "?"}
+                          {safeInitialValues.name?.charAt(0).toUpperCase() || "?"}
                         </AvatarFallback>
                       </Avatar>
                       <Button 

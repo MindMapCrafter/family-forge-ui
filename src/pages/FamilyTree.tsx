@@ -877,22 +877,24 @@ const FamilyTree = () => {
       
       {/* Add Member Modal */}
       <AddMemberModal 
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
         onSubmit={handleAddMemberSubmit}
         availableMembers={nodes.map(node => ({ id: node.id, name: node.data.name }))}
       />
       
       {/* Edit Member Modal */}
       <EditMemberModal 
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setCurrentEditNode(null);
-          setEditError(undefined);
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) {
+            setCurrentEditNode(null);
+            setEditError(undefined);
+          }
         }}
         onSubmit={handleEditMemberSubmit}
-        currentValues={currentEditNode || { id: '', name: '' }}
+        initialValues={currentEditNode || { name: '' }}
         error={editError}
       />
     </div>
