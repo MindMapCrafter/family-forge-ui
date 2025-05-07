@@ -880,7 +880,8 @@ const FamilyTree = () => {
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         onSubmit={handleAddMemberSubmit}
-        availableMembers={nodes.map(node => ({ id: node.id, name: node.data.name }))}
+        existingNodes={nodes}
+        isFirstMember={nodes.length === 0}
       />
       
       {/* Edit Member Modal */}
