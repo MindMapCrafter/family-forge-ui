@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, { 
   MiniMap, 
   Controls, 
@@ -22,107 +22,16 @@ import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal, { EditMemberFormValues } from '@/components/EditMemberModal';
 import LanguageSelector from '@/components/LanguageSelector';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { createInitialFamilyTree } from '@/utils/familyRelations';
 
 // Register custom node types
 const nodeTypes: NodeTypes = {
   familyMember: FamilyMemberNode,
 };
 
-// Initial empty state
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
-
-// Helper functions
-const calculateNodePosition = (
-  relatedNode: Node | undefined, 
-  relationship: string,
-  existingNodes: Node[]
-) => {
-  if (!relatedNode) {
-    return { x: 0, y: 0 }; // Center for the first node
-  }
-
-  // Increased spacing for better readability
-  const horizontalSpacing = 300;
-  const verticalSpacing = 200;
-
-  // Base position is the related node's position
-  const baseX = relatedNode.position.x;
-  const baseY = relatedNode.position.y;
-
-  // Check relationship type to determine positioning logic
-  const relationshipLower = relationship.toLowerCase();
-  
-  // Updated positioning logic to improve layout
-  // Spouse and sibling relationships (side by side)
-  const sideByRelations = ['spouse', 'husband', 'wife', 'sibling', 'brother', 'sister'];
-  if (sideByRelations.includes(relationshipLower)) {
-    // Find existing siblings/spouses to place new node properly
-    const existingSideBySide = existingNodes.filter(node => 
-      node.data.relationship && 
-      sideByRelations.includes(node.data.relationship.toLowerCase()) &&
-      Math.abs(node.position.y - baseY) < 50 // nodes roughly at the same level
-    );
-    
-    // Place horizontally with progressive offset
-    return { 
-      x: baseX + horizontalSpacing + (existingSideBySide.length * 75), 
-      y: baseY 
-    };
-  }
-  
-  // Extended family at same level (cousins, etc.)
-  const sameLevelRelations = ['cousin', 'nephew', 'niece'];
-  if (sameLevelRelations.includes(relationshipLower)) {
-    const existingSameLevel = existingNodes.filter(node => 
-      node.data.relationship && 
-      sameLevelRelations.includes(node.data.relationship.toLowerCase()) &&
-      Math.abs(node.position.y - baseY) < 50
-    );
-    
-    return { 
-      x: baseX + horizontalSpacing + (existingSameLevel.length * 75), 
-      y: baseY 
-    };
-  }
-  
-  // Parent relationships (always above)
-  if (['parent', 'father', 'mother', 'grandfather', 'grandmother'].includes(relationshipLower)) {
-    // Check for existing parents
-    const existingParents = existingNodes.filter(node => 
-      node.data.relationship && 
-      ['parent', 'father', 'mother', 'grandfather', 'grandmother'].includes(node.data.relationship.toLowerCase()) &&
-      Math.abs(node.position.y - (baseY - verticalSpacing)) < 50
-    );
-    
-    return { 
-      x: baseX + (existingParents.length * horizontalSpacing/2), 
-      y: baseY - verticalSpacing 
-    };
-  }
-  
-  // Child relationships (always below)
-  if (['child', 'son', 'daughter', 'grandchild', 'grandson', 'granddaughter'].includes(relationshipLower)) {
-    // Check for existing children
-    const existingChildren = existingNodes.filter(node => 
-      node.data.relationship && 
-      ['child', 'son', 'daughter', 'grandchild', 'grandson', 'granddaughter'].includes(node.data.relationship.toLowerCase()) &&
-      Math.abs(node.position.y - (baseY + verticalSpacing)) < 50
-    );
-    
-    return { 
-      x: baseX + (existingChildren.length * horizontalSpacing/2), 
-      y: baseY + verticalSpacing 
-    };
-  }
-  
-  // Default - place to the side to avoid overlaps
-  return { x: baseX + horizontalSpacing, y: baseY };
-};
-
 const FamilyTree = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editError, setEditError] = useState<string | undefined>(undefined);
@@ -139,6 +48,27 @@ const FamilyTree = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { t, formatMessage } = useLanguage();
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Initialize the family tree with our predefined structure
+  React.useEffect(() => {
+    if (!isInitialized) {
+      const { nodes: initialNodes, edges: initialEdges } = createInitialFamilyTree(
+        handleEditMember,
+        handleDeleteMember,
+        handleToggleChildren
+      );
+      
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+      setIsInitialized(true);
+      
+      // Update all node properties after initialization
+      setTimeout(() => {
+        updateAllNodeProperties();
+      }, 100);
+    }
+  }, [isInitialized]);
   
   const onConnect = useCallback((params: Connection) => {
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1', strokeWidth: 2 } }, eds));
@@ -169,6 +99,10 @@ const FamilyTree = () => {
 
   const onInit = useCallback((instance: ReactFlowInstance) => {
     setReactFlowInstance(instance);
+    // Auto fit view when initialized
+    setTimeout(() => {
+      instance.fitView({ padding: 0.2 });
+    }, 200);
   }, []);
 
   // Get children nodes for a parent node
@@ -236,7 +170,8 @@ const FamilyTree = () => {
       spouses: [] as {id: string, name: string}[],
       siblings: [] as {id: string, name: string}[],
       grandparents: [] as {id: string, name: string}[],
-      grandchildren: [] as {id: string, name: string}[]
+      grandchildren: [] as {id: string, name: string}[],
+      cousins: [] as {id: string, name: string}[]
     };
     
     // Get direct parents
@@ -282,31 +217,27 @@ const FamilyTree = () => {
       const currentNode = getNodeById(nodeId);
       if (!currentNode) return;
       
-      if (edge.target === nodeId) { // The other node points to this node
-        const sourceNode = getNodeById(edge.source);
-        if (sourceNode && sourceNode.data.relationship) {
-          const relation = sourceNode.data.relationship.toLowerCase();
+      // Direct connections (both ways)
+      const checkRelation = (sourceId: string, targetId: string) => {
+        if (sourceId === nodeId || targetId === nodeId) {
+          const otherId = sourceId === nodeId ? targetId : sourceId;
+          const otherNode = getNodeById(otherId);
           
-          if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
-            relatedMembers.spouses.push({ id: sourceNode.id, name: sourceNode.data.name });
-          } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
-            relatedMembers.siblings.push({ id: sourceNode.id, name: sourceNode.data.name });
+          if (otherNode && otherNode.data.relationship) {
+            const relation = otherNode.data.relationship.toLowerCase();
+            
+            if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
+              relatedMembers.spouses.push({ id: otherNode.id, name: otherNode.data.name });
+            } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
+              relatedMembers.siblings.push({ id: otherNode.id, name: otherNode.data.name });
+            } else if (relation === 'cousin') {
+              relatedMembers.cousins.push({ id: otherNode.id, name: otherNode.data.name });
+            }
           }
         }
-      }
+      };
       
-      if (edge.source === nodeId) { // This node points to another node
-        const targetNode = getNodeById(edge.target);
-        if (targetNode && targetNode.data.relationship) {
-          const relation = targetNode.data.relationship.toLowerCase();
-          
-          if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
-            relatedMembers.spouses.push({ id: targetNode.id, name: targetNode.data.name });
-          } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
-            relatedMembers.siblings.push({ id: targetNode.id, name: targetNode.data.name });
-          }
-        }
-      }
+      checkRelation(edge.source, edge.target);
     });
     
     return relatedMembers;
@@ -344,15 +275,13 @@ const FamilyTree = () => {
       return names.join(', ') + conjunction + lastItem;
     };
 
-    // Handle sibling relationship with more precision (side-by-side)
+    // Handle sibling relationship
     if (['sibling', 'brother', 'sister'].includes(relationshipLower)) {
-      // Only display "sibling of X" without implying other relationships
       if (relatedMembers.siblings.length > 0) {
         const siblingNames = relatedMembers.siblings.map(s => s.name);
         const siblingNameList = formatNameList(siblingNames);
         const siblingLabel = getRelationLabel(relationshipLower);
         
-        // Format based on language
         if (t.language === 'ur') {
           primaryRelation = `${siblingNameList} کا ${siblingLabel}`;
         } else if (t.language === 'pa') {
@@ -362,14 +291,13 @@ const FamilyTree = () => {
         }
       }
     }
-    // Handle spouse relationship with precise side-by-side layout
+    // Handle spouse relationship
     else if (['spouse', 'husband', 'wife'].includes(relationshipLower)) {
       if (relatedMembers.spouses.length > 0) {
         const spouseNames = relatedMembers.spouses.map(s => s.name);
         const spouseNameList = formatNameList(spouseNames);
         const spouseLabel = getRelationLabel(relationshipLower);
         
-        // Format based on language
         if (t.language === 'ur') {
           primaryRelation = `${spouseNameList} کا ${spouseLabel}`;
         } else if (t.language === 'pa') {
@@ -379,15 +307,13 @@ const FamilyTree = () => {
         }
       }
     }
-    // Handle child relationship with parents, showing only direct parent
+    // Handle child relationship
     else if (['child', 'son', 'daughter'].includes(relationshipLower)) {
       if (relatedMembers.parents.length > 0) {
-        // Only include parents with direct parent-child relationship
         const directParentNames = relatedMembers.parents.map(p => p.name);
         const parentNameList = formatNameList(directParentNames);
         const childLabel = getRelationLabel(relationshipLower);
         
-        // Format based on language
         if (t.language === 'ur') {
           primaryRelation = `${parentNameList} کا ${childLabel}`;
         } else if (t.language === 'pa') {
@@ -397,14 +323,29 @@ const FamilyTree = () => {
         }
       }
     }
-    // Handle parent relationship with children, showing only direct children
+    // Handle cousin relationship
+    else if (['cousin'].includes(relationshipLower)) {
+      if (relatedMembers.cousins.length > 0) {
+        const cousinNames = relatedMembers.cousins.map(c => c.name);
+        const cousinNameList = formatNameList(cousinNames);
+        const cousinLabel = getRelationLabel('cousin');
+        
+        if (t.language === 'ur') {
+          primaryRelation = `${cousinNameList} کا ${cousinLabel}`;
+        } else if (t.language === 'pa') {
+          primaryRelation = `${cousinNameList} ਦਾ ${cousinLabel}`;
+        } else {
+          primaryRelation = `${cousinLabel} of ${cousinNameList}`;
+        }
+      }
+    }
+    // Handle parent relationship
     else if (['parent', 'father', 'mother'].includes(relationshipLower)) {
       if (relatedMembers.children.length > 0) {
         const childNames = relatedMembers.children.map(c => c.name);
         const childNameList = formatNameList(childNames);
         const parentLabel = getRelationLabel(relationshipLower);
         
-        // Format based on language
         if (t.language === 'ur') {
           primaryRelation = `${childNameList} کا ${parentLabel}`;
         } else if (t.language === 'pa') {
@@ -414,8 +355,6 @@ const FamilyTree = () => {
         }
       }
     }
-    // Handle other relationships similarly, with proper spacing and connections
-    // ... keep existing code (other relationship handlers)
     
     // If we don't have a specific formatting for this relationship or couldn't determine relations
     if (!primaryRelation) {
@@ -482,7 +421,9 @@ const FamilyTree = () => {
           ...node.data,
           relationContext: generateRelationContext(node.id, node.data.relationship),
           hasChildren: childIds.length > 0, // Only true for nodes with actual children
-          onToggleChildren: handleToggleChildren
+          onToggleChildren: handleToggleChildren,
+          onEdit: handleEditMember,
+          onDelete: handleDeleteMember
         }
       };
     }));
@@ -549,7 +490,8 @@ const FamilyTree = () => {
     }
     
     // Calculate position based on improved relationship positioning logic
-    const position = calculateNodePosition(relatedNode, relationship, nodes);
+    // const position = calculateNodePosition(relatedNode, relationship, nodes);
+    const position = { x: 0, y: 0 };
     
     // Create new node
     const newNode: Node = {
@@ -573,50 +515,13 @@ const FamilyTree = () => {
     // Create edge between related node and new node
     let newEdge: Edge | null = null;
     if (relatedNode) {
-      // Determine edge direction based on relationship type
-      const relationshipLower = relationship.toLowerCase();
-      
-      // Parent-child relationships: parent is always source, child is target
-      if (['child', 'son', 'daughter', 'grandchild', 'grandson', 'granddaughter'].includes(relationshipLower)) {
-        newEdge = {
-          id: `e-${relatedNode.id}-${newId}`,
-          source: relatedTo,
-          target: newId,
-          animated: true,
-          style: { stroke: '#6366F1', strokeWidth: 2 }
-        };
-      } 
-      // Spouse/sibling relationships: newer node is source (to avoid confusing arrows)
-      // This keeps spouse nodes side by side without hierarchy implications
-      else if (['spouse', 'husband', 'wife', 'sibling', 'brother', 'sister'].includes(relationshipLower)) {
-        newEdge = {
-          id: `e-${newId}-${relatedNode.id}`,
-          source: newId,
-          target: relatedTo,
-          animated: true,
-          style: { stroke: '#6366F1', strokeWidth: 2 }
-        };
-      }
-      // Parent relationships: new node is source, existing node is target
-      else if (['parent', 'father', 'mother', 'grandfather', 'grandmother'].includes(relationshipLower)) {
-        newEdge = {
-          id: `e-${newId}-${relatedNode.id}`,
-          source: newId,
-          target: relatedTo,
-          animated: true,
-          style: { stroke: '#6366F1', strokeWidth: 2 }
-        };
-      }
-      // Default: create an edge without implying hierarchy
-      else {
-        newEdge = {
-          id: `e-${relatedNode.id}-${newId}`,
-          source: newId,
-          target: relatedNode.id, 
-          animated: true,
-          style: { stroke: '#6366F1', strokeWidth: 2 }
-        };
-      }
+      newEdge = {
+        id: `e-${relatedNode.id}-${newId}`,
+        source: relatedTo,
+        target: newId,
+        animated: true,
+        style: { stroke: '#6366F1', strokeWidth: 2 }
+      };
     }
     
     setNodes(nds => [...nds, newNode]);
@@ -638,15 +543,11 @@ const FamilyTree = () => {
   };
 
   const handleEditMember = (id: string) => {
-    console.log("Edit requested for ID:", id);
-    console.log("Available nodes:", nodes.map(n => ({ id: n.id, nodeDataId: n.data.id, name: n.data.name })));
-    
     // Clear any previous errors
     setEditError(undefined);
     
     const node = nodes.find(node => node.data.id === id);
     if (node) {
-      console.log("Found node to edit:", node);
       setCurrentEditNode({
         id: node.data.id,
         name: node.data.name,
@@ -657,7 +558,6 @@ const FamilyTree = () => {
       });
       setIsEditModalOpen(true);
     } else {
-      console.log("Node not found for id:", id);
       setEditError(t.noMemberFound);
       toast({
         title: t.error,
@@ -679,12 +579,9 @@ const FamilyTree = () => {
       return;
     }
     
-    console.log("Updating node with ID:", currentEditNode.id, "Values:", values);
-    
     try {
       setNodes(nodes.map(node => {
         if (node.data.id === currentEditNode.id) {
-          console.log("Updating node:", node.id);
           return {
             ...node,
             data: {
@@ -718,7 +615,6 @@ const FamilyTree = () => {
         updateAllNodeProperties();
       }, 50);
     } catch (error) {
-      console.error("Error updating member:", error);
       setEditError(t.updateFailedDesc);
       toast({
         title: t.updateFailed,
@@ -838,12 +734,24 @@ const FamilyTree = () => {
   const handleReset = () => {
     if (nodes.length > 0) {
       if (window.confirm(t.resetConfirm)) {
-        setNodes([]);
-        setEdges([]);
+        const { nodes: initialNodes, edges: initialEdges } = createInitialFamilyTree(
+          handleEditMember,
+          handleDeleteMember,
+          handleToggleChildren
+        );
+        
+        setNodes(initialNodes);
+        setEdges(initialEdges);
         setHiddenChildren({});
+        
+        // Update all node properties after reset
+        setTimeout(() => {
+          updateAllNodeProperties();
+        }, 100);
+        
         toast({
           title: t.resetComplete,
-          description: t.familyTreeExported
+          description: t.treeReset
         });
       }
     } else {
@@ -858,7 +766,7 @@ const FamilyTree = () => {
     <div className="w-full h-screen flex flex-col">
       <div className="p-4 border-b">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">{t.familyTreeTitle}</h1>
+          <h1 className="text-2xl font-bold">Family Tree App</h1>
           <LanguageSelector />
         </div>
         <div className="flex flex-wrap gap-2 mt-4">

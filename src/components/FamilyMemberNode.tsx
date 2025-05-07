@@ -26,6 +26,7 @@ interface FamilyMemberData {
     child?: string[];
     spouse?: string[];
     sibling?: string[];
+    cousin?: string[];
   };
 }
 
@@ -95,7 +96,7 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
 
   // Handle toggle children visibility
   const handleToggleChildren = () => {
-    // Only allow toggling if this node actually has children
+    // Only allow toggling if this node has children
     if (data.hasChildren) {
       const newCollapsedState = !childrenCollapsed;
       setChildrenCollapsed(newCollapsedState);
