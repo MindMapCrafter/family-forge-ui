@@ -488,7 +488,7 @@ const FamilyTree = () => {
   // Update node relation contexts and hasChildren property
   const updateAllNodeProperties = useCallback(() => {
     setNodes(currentNodes => currentNodes.map(node => {
-      // Only show hasChildren if actual parent-child relationships exist
+      // Calculate if this node has children (needed for all nodes now)
       const childIds = getChildNodesIds(node.id);
       
       return {
@@ -496,7 +496,7 @@ const FamilyTree = () => {
         data: {
           ...node.data,
           relationContext: generateRelationContext(node.id, node.data.relationship),
-          hasChildren: childIds.length > 0, // Only true for nodes with actual children
+          hasChildren: childIds.length > 0,
           onToggleChildren: handleToggleChildren,
           onEdit: handleEditMember,
           onDelete: handleDeleteMember

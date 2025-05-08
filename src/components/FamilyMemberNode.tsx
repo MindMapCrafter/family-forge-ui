@@ -3,7 +3,7 @@ import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, ChevronDown, ChevronUp, Link, Globe, Facebook, Twitter, Linkedin } from 'lucide-react';
+import { Edit, Trash2, ChevronDown, ChevronUp, Globe, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toggle } from '@/components/ui/toggle';
@@ -106,13 +106,10 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
 
   // Handle toggle children visibility
   const handleToggleChildren = () => {
-    // Only allow toggling if this node has children
-    if (data.hasChildren) {
-      const newCollapsedState = !childrenCollapsed;
-      setChildrenCollapsed(newCollapsedState);
-      if (data.onToggleChildren) {
-        data.onToggleChildren(data.id, newCollapsedState);
-      }
+    const newCollapsedState = !childrenCollapsed;
+    setChildrenCollapsed(newCollapsedState);
+    if (data.onToggleChildren) {
+      data.onToggleChildren(data.id, newCollapsedState);
     }
   };
 
@@ -239,27 +236,25 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
             </div>
           </ScrollArea>
           
-          {/* Only show hide/show toggle for nodes with actual children */}
-          {data.hasChildren === true && (
-            <Toggle 
-              className="mt-2 text-xs flex items-center" 
-              pressed={childrenCollapsed}
-              onPressedChange={handleToggleChildren}
-              aria-label={childrenCollapsed ? t.showChildren : t.hideChildren}
-            >
-              {childrenCollapsed ? (
-                <>
-                  <ChevronDown size={14} className="mr-1" />
-                  {t.showChildren}
-                </>
-              ) : (
-                <>
-                  <ChevronUp size={14} className="mr-1" />
-                  {t.hideChildren}
-                </>
-              )}
-            </Toggle>
-          )}
+          {/* Show hide/show toggle button for all nodes, not just those with children */}
+          <Toggle 
+            className="mt-2 text-xs flex items-center" 
+            pressed={childrenCollapsed}
+            onPressedChange={handleToggleChildren}
+            aria-label={childrenCollapsed ? t.showChildren : t.hideChildren}
+          >
+            {childrenCollapsed ? (
+              <>
+                <ChevronDown size={14} className="mr-1" />
+                {t.showChildren}
+              </>
+            ) : (
+              <>
+                <ChevronUp size={14} className="mr-1" />
+                {t.hideChildren}
+              </>
+            )}
+          </Toggle>
         </div>
       </Card>
       <Handle 
