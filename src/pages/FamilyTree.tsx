@@ -423,16 +423,8 @@ const FamilyTree = () => {
     return primaryRelation;
   }, [findRelatedMembers, t]);
   
-  // Handle hiding/showing children nodes - improved recursion support
+  // Handle hiding/showing children nodes - improved with recursive functionality for all nodes
   const handleToggleChildren = useCallback((nodeId: string, isCollapsed: boolean) => {
-    // First check if this node has children before allowing toggle
-    const childIds = getChildNodesIds(nodeId);
-    
-    // Only allow toggle if there are actual children
-    if (childIds.length === 0) {
-      return; // No children to hide/show
-    }
-    
     // Get all descendant nodes to handle recursive hiding
     const getAllDescendantIds = (parentId: string, accumulator: Set<string> = new Set()): Set<string> => {
       const directChildIds = getChildNodesIds(parentId);
@@ -446,11 +438,9 @@ const FamilyTree = () => {
       return accumulator;
     };
     
-    // Get all descendants if we're collapsing them
-    const affectedIds = isCollapsed 
-      ? Array.from(getAllDescendantIds(nodeId))
-      : childIds; // Only show direct children when expanding
-      
+    // Get all descendants that need to be hidden or shown
+    const affectedIds = Array.from(getAllDescendantIds(nodeId));
+    
     // Update hidden children state
     setHiddenChildren(prev => ({
       ...prev,
@@ -941,7 +931,7 @@ const FamilyTree = () => {
         </ReactFlow>
       </div>
       
-      {/* Add Member Modal */}
+      {/* Add Member Modal and Edit Member Modal */}
       <AddMemberModal 
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
@@ -950,7 +940,6 @@ const FamilyTree = () => {
         isFirstMember={nodes.length === 0}
       />
       
-      {/* Edit Member Modal */}
       <EditMemberModal 
         open={isEditModalOpen}
         onOpenChange={(open) => {

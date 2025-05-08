@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
@@ -152,7 +151,8 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
             </Button>
           </div>
           
-          <ScrollArea className="w-full max-h-[140px] px-1">
+          {/* Improved scroll area with dynamic height to fix overflow issues */}
+          <ScrollArea className="w-full max-h-[160px] px-1 overflow-y-auto">
             {/* Information in strict order: Name, Gender, Relation */}
             <div className="space-y-2">
               <div>

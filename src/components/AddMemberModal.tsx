@@ -44,7 +44,6 @@ const formSchema = z.object({
   gender: z.enum(['male', 'female', 'other']).default('other'),
   image: z.any().optional(),
   title: z.string().optional(),
-  // Add social media fields
   website: z.string().optional(),
   facebookUrl: z.string().optional(),
   twitterHandle: z.string().optional(),
@@ -115,7 +114,7 @@ const AddMemberModal = ({
     }
     
     // Check file size
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > 2 * 1024 * 1024) {
       toast({
         title: t.imageTooLarge,
         description: t.imageSizeLimit,
@@ -129,7 +128,7 @@ const AddMemberModal = ({
     }
     
     // Check file type
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       toast({
         title: t.invalidFileType,
         description: t.validFileTypes,
@@ -165,7 +164,7 @@ const AddMemberModal = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md">
+      <SheetContent className="sm:max-w-md overflow-y-auto max-h-[100vh] pb-20">
         <SheetHeader>
           <SheetTitle>{t.addFamilyMember}</SheetTitle>
           <SheetDescription>
