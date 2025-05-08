@@ -3,11 +3,12 @@ import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit, Trash2, ChevronDown, ChevronUp, Link, Globe, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toggle } from '@/components/ui/toggle';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface FamilyMemberData {
   name: string;
@@ -28,6 +29,11 @@ interface FamilyMemberData {
     sibling?: string[];
     cousin?: string[];
   };
+  // New additional properties
+  website?: string;
+  facebookUrl?: string;
+  twitterHandle?: string;
+  linkedinUrl?: string;
 }
 
 interface FamilyMemberNodeProps {
@@ -40,6 +46,10 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
   // Use language context for translations
   const { t, language } = useLanguage();
   const [childrenCollapsed, setChildrenCollapsed] = React.useState(false);
+  const [socialExpanded, setSocialExpanded] = React.useState(false);
+  
+  // Check if we have any social media links to display
+  const hasSocialLinks = data.website || data.facebookUrl || data.twitterHandle || data.linkedinUrl;
 
   // Determine border color based on gender
   const getBorderColor = () => {
@@ -173,6 +183,58 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
                 <div className="text-sm font-semibold text-primary mt-1">
                   {data.title}
                 </div>
+              )}
+              
+              {/* Only show the social links section if any links exist */}
+              {hasSocialLinks && (
+                <Collapsible 
+                  open={socialExpanded} 
+                  onOpenChange={setSocialExpanded} 
+                  className="w-full mt-2"
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full p-1 h-6 text-xs flex justify-between items-center">
+                      <span>Social Links</span>
+                      {socialExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="flex flex-wrap gap-2 mt-1 justify-center">
+                      {data.website && (
+                        <a href={data.website} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                            <Globe size={14} />
+                            <span className="sr-only">Website</span>
+                          </Button>
+                        </a>
+                      )}
+                      {data.facebookUrl && (
+                        <a href={data.facebookUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                            <Facebook size={14} />
+                            <span className="sr-only">Facebook</span>
+                          </Button>
+                        </a>
+                      )}
+                      {data.twitterHandle && (
+                        <a href={`https://twitter.com/${data.twitterHandle.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                            <Twitter size={14} />
+                            <span className="sr-only">Twitter</span>
+                          </Button>
+                        </a>
+                      )}
+                      {data.linkedinUrl && (
+                        <a href={data.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                            <Linkedin size={14} />
+                            <span className="sr-only">LinkedIn</span>
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
           </ScrollArea>
