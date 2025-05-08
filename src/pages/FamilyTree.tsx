@@ -42,15 +42,19 @@ const FamilyTree = () => {
     image?: string;
     title?: string;
     relationship?: string;
+    website?: string;
+    facebookUrl?: string;
+    twitterHandle?: string;
+    linkedinUrl?: string;
   } | null>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [hiddenChildren, setHiddenChildren] = useState<{[nodeId: string]: boolean}>({});
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { t, formatMessage } = useLanguage();
+  const { t, formatMessage, language } = useLanguage();
   const [isInitialized, setIsInitialized] = useState(false);
   
-  // Initialize the family tree with our predefined structure
+  // Initialize the family tree with an empty structure
   React.useEffect(() => {
     if (!isInitialized) {
       const { nodes: initialNodes, edges: initialEdges } = createInitialFamilyTree(
@@ -62,18 +66,9 @@ const FamilyTree = () => {
       setNodes(initialNodes);
       setEdges(initialEdges);
       setIsInitialized(true);
-      
-      // Update all node properties after initialization
-      setTimeout(() => {
-        updateAllNodeProperties();
-      }, 100);
     }
   }, [isInitialized]);
   
-  const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#6366F1', strokeWidth: 2 } }, eds));
-  }, [setEdges]);
-
   // Handle zoom in action with enhanced zooming
   const handleZoomIn = useCallback(() => {
     if (reactFlowInstance) {
@@ -105,7 +100,7 @@ const FamilyTree = () => {
     }, 200);
   }, []);
 
-  // Get children nodes for a parent node
+  // Get children nodes for a parent node - improved to ensure correct child relationships
   const getChildNodesIds = useCallback((parentId: string) => {
     const childIds: string[] = [];
     edges.forEach(edge => {
@@ -164,14 +159,16 @@ const FamilyTree = () => {
 
   // Find related members for a given node ID with expanded hierarchy
   const findRelatedMembers = useCallback((nodeId: string) => {
+    // ... keep existing code (building related members object)
+    
     const relatedMembers = {
-      parents: [] as {id: string, name: string}[],
-      children: [] as {id: string, name: string}[],
-      spouses: [] as {id: string, name: string}[],
-      siblings: [] as {id: string, name: string}[],
-      grandparents: [] as {id: string, name: string}[],
-      grandchildren: [] as {id: string, name: string}[],
-      cousins: [] as {id: string, name: string}[]
+      parents: [] as {id: string, name: string, gender?: string}[],
+      children: [] as {id: string, name: string, gender?: string}[],
+      spouses: [] as {id: string, name: string, gender?: string}[],
+      siblings: [] as {id: string, name: string, gender?: string}[],
+      grandparents: [] as {id: string, name: string, gender?: string}[],
+      grandchildren: [] as {id: string, name: string, gender?: string}[],
+      cousins: [] as {id: string, name: string, gender?: string}[]
     };
     
     // Get direct parents
@@ -179,7 +176,11 @@ const FamilyTree = () => {
     parentIds.forEach(parentId => {
       const parentNode = getNodeById(parentId);
       if (parentNode) {
-        relatedMembers.parents.push({ id: parentNode.id, name: parentNode.data.name });
+        relatedMembers.parents.push({ 
+          id: parentNode.id, 
+          name: parentNode.data.name,
+          gender: parentNode.data.gender 
+        });
       }
     });
     
@@ -188,7 +189,11 @@ const FamilyTree = () => {
     childIds.forEach(childId => {
       const childNode = getNodeById(childId);
       if (childNode) {
-        relatedMembers.children.push({ id: childNode.id, name: childNode.data.name });
+        relatedMembers.children.push({ 
+          id: childNode.id, 
+          name: childNode.data.name,
+          gender: childNode.data.gender 
+        });
       }
     });
     
@@ -197,7 +202,11 @@ const FamilyTree = () => {
     grandparentIds.forEach(grandparentId => {
       const grandparentNode = getNodeById(grandparentId);
       if (grandparentNode) {
-        relatedMembers.grandparents.push({ id: grandparentNode.id, name: grandparentNode.data.name });
+        relatedMembers.grandparents.push({ 
+          id: grandparentNode.id, 
+          name: grandparentNode.data.name,
+          gender: grandparentNode.data.gender 
+        });
       }
     });
     
@@ -207,7 +216,11 @@ const FamilyTree = () => {
       grandchildIds.forEach(grandchildId => {
         const grandchildNode = getNodeById(grandchildId);
         if (grandchildNode) {
-          relatedMembers.grandchildren.push({ id: grandchildNode.id, name: grandchildNode.data.name });
+          relatedMembers.grandchildren.push({ 
+            id: grandchildNode.id, 
+            name: grandchildNode.data.name,
+            gender: grandchildNode.data.gender 
+          });
         }
       });
     });
@@ -227,11 +240,23 @@ const FamilyTree = () => {
             const relation = otherNode.data.relationship.toLowerCase();
             
             if (relation === 'spouse' || relation === 'husband' || relation === 'wife') {
-              relatedMembers.spouses.push({ id: otherNode.id, name: otherNode.data.name });
+              relatedMembers.spouses.push({ 
+                id: otherNode.id, 
+                name: otherNode.data.name,
+                gender: otherNode.data.gender 
+              });
             } else if (relation === 'sibling' || relation === 'brother' || relation === 'sister') {
-              relatedMembers.siblings.push({ id: otherNode.id, name: otherNode.data.name });
+              relatedMembers.siblings.push({ 
+                id: otherNode.id, 
+                name: otherNode.data.name,
+                gender: otherNode.data.gender 
+              });
             } else if (relation === 'cousin') {
-              relatedMembers.cousins.push({ id: otherNode.id, name: otherNode.data.name });
+              relatedMembers.cousins.push({ 
+                id: otherNode.id, 
+                name: otherNode.data.name,
+                gender: otherNode.data.gender 
+              });
             }
           }
         }
@@ -244,6 +269,7 @@ const FamilyTree = () => {
   }, [nodes, edges, getParentNodesIds, getChildNodesIds, getGrandparentNodesIds, getNodeById]);
 
   // Generate contextual relation description with improved formatting and hierarchy
+  // Enhanced to support proper Urdu grammar based on gender
   const generateRelationContext = useCallback((nodeId: string, relationship: string) => {
     if (relationship.toLowerCase() === 'root') {
       // Set different root labels based on language
@@ -274,16 +300,28 @@ const FamilyTree = () => {
       const lastItem = names.pop();
       return names.join(', ') + conjunction + lastItem;
     };
+    
+    // Determine the correct possessive form for Urdu based on gender
+    const getUrduPossessive = (personInfo: {name: string, gender?: string}) => {
+      // Default to masculine if gender is not specified
+      const isFemale = personInfo.gender === 'female';
+      return isFemale ? 'کی' : 'کا';
+    };
 
     // Handle sibling relationship
     if (['sibling', 'brother', 'sister'].includes(relationshipLower)) {
       if (relatedMembers.siblings.length > 0) {
-        const siblingNames = relatedMembers.siblings.map(s => s.name);
+        const siblings = relatedMembers.siblings;
+        const siblingNames = siblings.map(s => s.name);
         const siblingNameList = formatNameList(siblingNames);
         const siblingLabel = getRelationLabel(relationshipLower);
         
         if (t.language === 'ur') {
-          primaryRelation = `${siblingNameList} کا ${siblingLabel}`;
+          // For each sibling, use the correct possessive based on gender
+          const possessiveMarkers = siblings.map(getUrduPossessive);
+          // Use the first possessive marker as default
+          const possessive = possessiveMarkers[0] || 'کا';
+          primaryRelation = `${siblingNameList} ${possessive} ${siblingLabel}`;
         } else if (t.language === 'pa') {
           primaryRelation = `${siblingNameList} ਦਾ ${siblingLabel}`;
         } else {
@@ -294,12 +332,17 @@ const FamilyTree = () => {
     // Handle spouse relationship
     else if (['spouse', 'husband', 'wife'].includes(relationshipLower)) {
       if (relatedMembers.spouses.length > 0) {
-        const spouseNames = relatedMembers.spouses.map(s => s.name);
+        const spouses = relatedMembers.spouses;
+        const spouseNames = spouses.map(s => s.name);
         const spouseNameList = formatNameList(spouseNames);
         const spouseLabel = getRelationLabel(relationshipLower);
         
         if (t.language === 'ur') {
-          primaryRelation = `${spouseNameList} کا ${spouseLabel}`;
+          // For each spouse, use the correct possessive based on gender
+          const possessiveMarkers = spouses.map(getUrduPossessive);
+          // Use the first possessive marker as default
+          const possessive = possessiveMarkers[0] || 'کا';
+          primaryRelation = `${spouseNameList} ${possessive} ${spouseLabel}`;
         } else if (t.language === 'pa') {
           primaryRelation = `${spouseNameList} ਦਾ ${spouseLabel}`;
         } else {
@@ -310,12 +353,17 @@ const FamilyTree = () => {
     // Handle child relationship
     else if (['child', 'son', 'daughter'].includes(relationshipLower)) {
       if (relatedMembers.parents.length > 0) {
-        const directParentNames = relatedMembers.parents.map(p => p.name);
+        const parents = relatedMembers.parents;
+        const directParentNames = parents.map(p => p.name);
         const parentNameList = formatNameList(directParentNames);
         const childLabel = getRelationLabel(relationshipLower);
         
         if (t.language === 'ur') {
-          primaryRelation = `${parentNameList} کا ${childLabel}`;
+          // For each parent, use the correct possessive based on gender
+          const possessiveMarkers = parents.map(getUrduPossessive);
+          // Use the first possessive marker as default
+          const possessive = possessiveMarkers[0] || 'کا';
+          primaryRelation = `${parentNameList} ${possessive} ${childLabel}`;
         } else if (t.language === 'pa') {
           primaryRelation = `${parentNameList} ਦਾ ${childLabel}`;
         } else {
@@ -326,12 +374,17 @@ const FamilyTree = () => {
     // Handle cousin relationship
     else if (['cousin'].includes(relationshipLower)) {
       if (relatedMembers.cousins.length > 0) {
-        const cousinNames = relatedMembers.cousins.map(c => c.name);
+        const cousins = relatedMembers.cousins;
+        const cousinNames = cousins.map(c => c.name);
         const cousinNameList = formatNameList(cousinNames);
         const cousinLabel = getRelationLabel('cousin');
         
         if (t.language === 'ur') {
-          primaryRelation = `${cousinNameList} کا ${cousinLabel}`;
+          // For each cousin, use the correct possessive based on gender
+          const possessiveMarkers = cousins.map(getUrduPossessive);
+          // Use the first possessive marker as default
+          const possessive = possessiveMarkers[0] || 'کا';
+          primaryRelation = `${cousinNameList} ${possessive} ${cousinLabel}`;
         } else if (t.language === 'pa') {
           primaryRelation = `${cousinNameList} ਦਾ ${cousinLabel}`;
         } else {
@@ -342,12 +395,17 @@ const FamilyTree = () => {
     // Handle parent relationship
     else if (['parent', 'father', 'mother'].includes(relationshipLower)) {
       if (relatedMembers.children.length > 0) {
-        const childNames = relatedMembers.children.map(c => c.name);
+        const children = relatedMembers.children;
+        const childNames = children.map(c => c.name);
         const childNameList = formatNameList(childNames);
         const parentLabel = getRelationLabel(relationshipLower);
         
         if (t.language === 'ur') {
-          primaryRelation = `${childNameList} کا ${parentLabel}`;
+          // For each child, use the correct possessive based on gender
+          const possessiveMarkers = children.map(getUrduPossessive);
+          // Use the first possessive marker as default
+          const possessive = possessiveMarkers[0] || 'کا';
+          primaryRelation = `${childNameList} ${possessive} ${parentLabel}`;
         } else if (t.language === 'pa') {
           primaryRelation = `${childNameList} ਦਾ ${parentLabel}`;
         } else {
@@ -365,7 +423,7 @@ const FamilyTree = () => {
     return primaryRelation;
   }, [findRelatedMembers, t]);
   
-  // Handle hiding/showing children nodes
+  // Handle hiding/showing children nodes - improved recursion support
   const handleToggleChildren = useCallback((nodeId: string, isCollapsed: boolean) => {
     // First check if this node has children before allowing toggle
     const childIds = getChildNodesIds(nodeId);
@@ -375,6 +433,24 @@ const FamilyTree = () => {
       return; // No children to hide/show
     }
     
+    // Get all descendant nodes to handle recursive hiding
+    const getAllDescendantIds = (parentId: string, accumulator: Set<string> = new Set()): Set<string> => {
+      const directChildIds = getChildNodesIds(parentId);
+      
+      directChildIds.forEach(childId => {
+        accumulator.add(childId);
+        // Recursively get descendants of this child
+        getAllDescendantIds(childId, accumulator);
+      });
+      
+      return accumulator;
+    };
+    
+    // Get all descendants if we're collapsing them
+    const affectedIds = isCollapsed 
+      ? Array.from(getAllDescendantIds(nodeId))
+      : childIds; // Only show direct children when expanding
+      
     // Update hidden children state
     setHiddenChildren(prev => ({
       ...prev,
@@ -384,7 +460,7 @@ const FamilyTree = () => {
     // Update node visibility
     setNodes(currentNodes => 
       currentNodes.map(node => {
-        if (childIds.includes(node.id)) {
+        if (affectedIds.includes(node.id)) {
           return {
             ...node,
             hidden: isCollapsed
@@ -441,9 +517,20 @@ const FamilyTree = () => {
     setIsAddModalOpen(true);
   };
 
-  // Handle adding a new member
+  // Handle adding a new member - with support for social media fields
   const handleAddMemberSubmit = (values: any) => {
-    const { name, relationship, relatedTo, gender, image, title } = values;
+    const { 
+      name, 
+      relationship, 
+      relatedTo, 
+      gender, 
+      image, 
+      title, 
+      website,
+      facebookUrl,
+      twitterHandle,
+      linkedinUrl
+    } = values;
     
     // Generate a unique ID for the new node
     const newId = `member-${Date.now()}`;
@@ -464,7 +551,12 @@ const FamilyTree = () => {
           onEdit: (id: string) => handleEditMember(id),
           onDelete: (id: string) => handleDeleteMember(id),
           onToggleChildren: handleToggleChildren,
-          hasChildren: false
+          hasChildren: false,
+          // Add social media fields
+          website,
+          facebookUrl,
+          twitterHandle,
+          linkedinUrl
         },
         position: { x: 0, y: 0 }
       };
@@ -493,7 +585,7 @@ const FamilyTree = () => {
     // const position = calculateNodePosition(relatedNode, relationship, nodes);
     const position = { x: 0, y: 0 };
     
-    // Create new node
+    // Create new node with social media fields
     const newNode: Node = {
       id: newId,
       type: 'familyMember',
@@ -507,7 +599,12 @@ const FamilyTree = () => {
         onEdit: (id: string) => handleEditMember(id),
         onDelete: (id: string) => handleDeleteMember(id),
         onToggleChildren: handleToggleChildren,
-        hasChildren: false
+        hasChildren: false,
+        // Add social media fields
+        website,
+        facebookUrl,
+        twitterHandle,
+        linkedinUrl
       },
       position
     };
@@ -554,7 +651,12 @@ const FamilyTree = () => {
         gender: node.data.gender,
         image: node.data.image,
         title: node.data.title,
-        relationship: node.data.relationship
+        relationship: node.data.relationship,
+        // Include social media fields
+        website: node.data.website,
+        facebookUrl: node.data.facebookUrl,
+        twitterHandle: node.data.twitterHandle,
+        linkedinUrl: node.data.linkedinUrl
       });
       setIsEditModalOpen(true);
     } else {
@@ -590,6 +692,11 @@ const FamilyTree = () => {
               gender: values.gender,
               image: values.image,
               title: values.title,
+              // Update social media fields
+              website: values.website,
+              facebookUrl: values.facebookUrl,
+              twitterHandle: values.twitterHandle,
+              linkedinUrl: values.linkedinUrl,
               id: node.data.id,
               onEdit: node.data.onEdit,
               onDelete: node.data.onDelete,
@@ -709,6 +816,11 @@ const FamilyTree = () => {
         image: node.data.image,
         title: node.data.title,
         id: node.data.id,
+        // Include social media fields
+        website: node.data.website,
+        facebookUrl: node.data.facebookUrl,
+        twitterHandle: node.data.twitterHandle,
+        linkedinUrl: node.data.linkedinUrl
       }
     }));
     
@@ -743,11 +855,6 @@ const FamilyTree = () => {
         setNodes(initialNodes);
         setEdges(initialEdges);
         setHiddenChildren({});
-        
-        // Update all node properties after reset
-        setTimeout(() => {
-          updateAllNodeProperties();
-        }, 100);
         
         toast({
           title: t.resetComplete,
