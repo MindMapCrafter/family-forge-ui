@@ -869,6 +869,12 @@ const FamilyTree = () => {
     }
   };
 
+  // Handle edge connections
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
+  );
+
   return (
     <div className="w-full h-screen flex flex-col">
       <div className="p-4 border-b">

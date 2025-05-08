@@ -29,7 +29,7 @@ interface FamilyMemberData {
     sibling?: string[];
     cousin?: string[];
   };
-  // New additional properties
+  // Add social media properties
   website?: string;
   facebookUrl?: string;
   twitterHandle?: string;

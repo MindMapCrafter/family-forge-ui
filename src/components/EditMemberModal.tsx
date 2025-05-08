@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -27,13 +26,18 @@ import { AlertTriangle, Upload, Image, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-// Enhanced form schema with all relevant fields
+// Enhanced form schema with all relevant fields including social media
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   gender: z.enum(['male', 'female', 'other']),
   image: z.string().optional(),
   title: z.string().optional(),
   relationship: z.string().optional(),
+  // Add social media fields
+  website: z.string().optional().nullable(),
+  facebookUrl: z.string().optional().nullable(),
+  twitterHandle: z.string().optional().nullable(),
+  linkedinUrl: z.string().optional().nullable(),
 });
 
 export type EditMemberFormValues = z.infer<typeof formSchema>;
@@ -48,6 +52,11 @@ interface EditMemberModalProps {
     image?: string;
     title?: string;
     relationship?: string;
+    // Add social media fields to props interface
+    website?: string;
+    facebookUrl?: string;
+    twitterHandle?: string;
+    linkedinUrl?: string;
   };
   error?: string;
 }
@@ -267,6 +276,83 @@ const EditMemberModal = ({
                   </FormItem>
                 )}
               />
+              
+              {/* Add social media fields */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-medium mb-2">Social Media Links</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website URL</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://example.com" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="facebookUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook URL</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://facebook.com/username" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="twitterHandle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Twitter Handle</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="@username" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="linkedinUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LinkedIn URL</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://linkedin.com/in/username" 
+                          {...field} 
+                          value={field.value || ''} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <DialogFooter className="pt-4">
                 <Button type="submit">{t.save}</Button>

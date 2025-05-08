@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -44,6 +43,12 @@ const formSchema = z.object({
   relatedTo: z.string().optional(),
   gender: z.enum(['male', 'female', 'other']).default('other'),
   image: z.any().optional(),
+  title: z.string().optional(),
+  // Add social media fields
+  website: z.string().optional(),
+  facebookUrl: z.string().optional(),
+  twitterHandle: z.string().optional(),
+  linkedinUrl: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -76,6 +81,11 @@ const AddMemberModal = ({
       relatedTo: '',
       gender: 'other',
       image: undefined,
+      title: '',
+      website: '',
+      facebookUrl: '',
+      twitterHandle: '',
+      linkedinUrl: '',
     },
   });
 
@@ -199,6 +209,7 @@ const AddMemberModal = ({
               </Button>
             </div>
             
+            {/* Basic information fields */}
             <FormField
               control={form.control}
               name="name"
@@ -234,6 +245,20 @@ const AddMemberModal = ({
                       <SelectItem value="other">{t.other}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter title" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -308,6 +333,67 @@ const AddMemberModal = ({
                 />
               </>
             )}
+            
+            {/* Social media fields */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-medium mb-2">Social Media Links (Optional)</h3>
+              
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="facebookUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Facebook URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://facebook.com/username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="twitterHandle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Twitter Handle</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="linkedinUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>LinkedIn URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://linkedin.com/in/username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <SheetFooter className="pt-4">
               <SheetClose asChild>
