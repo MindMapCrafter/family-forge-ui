@@ -423,7 +423,7 @@ const FamilyTree = () => {
     return primaryRelation;
   }, [findRelatedMembers, t]);
   
-  // Handle hiding/showing children nodes - improved with recursive functionality for all nodes
+  // Handle hiding/showing children nodes - fixed recursive functionality for all nodes
   const handleToggleChildren = useCallback((nodeId: string, isCollapsed: boolean) => {
     // Get all descendant nodes to handle recursive hiding
     const getAllDescendantIds = (parentId: string, accumulator: Set<string> = new Set()): Set<string> => {
@@ -447,7 +447,7 @@ const FamilyTree = () => {
       [nodeId]: isCollapsed
     }));
     
-    // Update node visibility
+    // Update node visibility - this is where we directly set the hidden property
     setNodes(currentNodes => 
       currentNodes.map(node => {
         if (affectedIds.includes(node.id)) {
@@ -480,20 +480,25 @@ const FamilyTree = () => {
     setNodes(currentNodes => currentNodes.map(node => {
       // Calculate if this node has children (needed for all nodes now)
       const childIds = getChildNodesIds(node.id);
+      const hasChildren = childIds.length > 0;
+      
+      // Update node with correct childrenCollapsed state
+      const isCollapsed = hiddenChildren[node.id] || false;
       
       return {
         ...node,
         data: {
           ...node.data,
           relationContext: generateRelationContext(node.id, node.data.relationship),
-          hasChildren: childIds.length > 0,
+          hasChildren: hasChildren,
           onToggleChildren: handleToggleChildren,
+          childrenCollapsed: isCollapsed, // Add this property to track state in the node
           onEdit: handleEditMember,
           onDelete: handleDeleteMember
         }
       };
     }));
-  }, [setNodes, generateRelationContext, getChildNodesIds, handleToggleChildren]);
+  }, [setNodes, generateRelationContext, getChildNodesIds, handleToggleChildren, hiddenChildren]);
 
   // Update contexts whenever nodes or edges change
   React.useEffect(() => {
