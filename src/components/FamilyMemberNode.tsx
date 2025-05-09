@@ -237,8 +237,9 @@ const FamilyMemberNode = ({ data, isConnectable = true, id }: FamilyMemberNodePr
             </div>
           </ScrollArea>
           
-          {/* Only show toggle button if this node has children */}
-          {data.hasChildren && (
+          {/* Show toggle button ONLY if this node has children. 
+              This must be controlled directly by the hasChildren prop */}
+          {data.hasChildren === true && (
             <Toggle 
               className="mt-2 text-xs flex items-center" 
               pressed={data.childrenCollapsed ?? false}

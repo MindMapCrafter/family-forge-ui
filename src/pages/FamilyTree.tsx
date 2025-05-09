@@ -482,7 +482,7 @@ const FamilyTree = () => {
       const childIds = getChildNodesIds(node.id);
       const hasChildren = childIds.length > 0;
       
-      // Update node with correct childrenCollapsed state
+      // Update node with correct childrenCollapsed state and hasChildren flag
       const isCollapsed = hiddenChildren[node.id] || false;
       
       return {
@@ -490,7 +490,7 @@ const FamilyTree = () => {
         data: {
           ...node.data,
           relationContext: generateRelationContext(node.id, node.data.relationship),
-          hasChildren: hasChildren,
+          hasChildren: hasChildren, // Ensure hasChildren is properly set for all nodes
           onToggleChildren: handleToggleChildren,
           childrenCollapsed: isCollapsed, // Add this property to track state in the node
           onEdit: handleEditMember,
@@ -505,7 +505,7 @@ const FamilyTree = () => {
     if (nodes.length > 0) {
       updateAllNodeProperties();
     }
-  }, [nodes.length, edges.length, updateAllNodeProperties]);
+  }, [nodes.length, edges.length, updateAllNodeProperties, hiddenChildren]);
 
   // Add the missing handleAddMember function
   const handleAddMember = () => {
